@@ -1,23 +1,32 @@
-import type { Channel, Params, SeriesPoint, SimResult, StepDown } from "./types";
+import type {
+  Channel,
+  DailyBlocks,
+  MonthSchedule,
+  Params,
+  SeriesPoint,
+  SimResult,
+  StepDown,
+} from "./types";
 import { baseCAC, customersFromSpend } from "./saturation";
 
 // ---- Calendar -------------------------------------------------------------
-// Day 0 = 1 June 2026. The model auto-extends day-by-day until ARR hits $1M
-// or the 5-year safety cap.
+// Fixed horizon: day 0 = 1 June 2026 (launch) -> 31 December 2030.
 export const START = new Date(2026, 5, 1);
-export const MAXDAYS = 1826; // 5 years
+export const HORIZON_END = new Date(2030, 11, 31);
 const BUF = 400; // slack for forward-scheduled billings / payout lags
 
 interface DayInfo {
   date: Date;
-  mi: number; // months since start (0 = June 2026)
-  first: boolean; // first calendar day of a month
+  mi: number; // month index since start (0 = Jun 2026)
+  first: boolean;
 }
 
 export const DAYS: DayInfo[] = (() => {
   const out: DayInfo[] = [];
-  for (let i = 0; i < MAXDAYS; i++) {
+  const endMs = HORIZON_END.getTime();
+  for (let i = 0; ; i++) {
     const d = new Date(START.getTime() + i * 864e5);
+    if (d.getTime() > endMs) break;
     out.push({
       date: d,
       mi: (d.getFullYear() - 2026) * 12 + d.getMonth() - 5,
@@ -27,8 +36,35 @@ export const DAYS: DayInfo[] = (() => {
   return out;
 })();
 
-// Cumulative survival fraction of a step-down curve at tick k.
-// Retention values are stored as percentages (e.g. 55 = 55%).
+export const NDAYS = DAYS.length;
+export const NMONTHS = DAYS[NDAYS - 1].mi + 1; // 55
+
+// Calendar month labels, e.g. "Jun '26".
+export const MONTH_LABELS: string[] = (() => {
+  const out: string[] = [];
+  for (let m = 0; m < NMONTHS; m++) {
+    const d = new Date(2026, 5 + m, 1);
+    out.push(
+      d.toLocaleString("en-US", { month: "short" }) + " '" + String(d.getFullYear()).slice(2),
+    );
+  }
+  return out;
+})();
+
+// Days per calendar month within the horizon.
+export const DAYS_IN_MONTH: number[] = (() => {
+  const out = Array.from({ length: NMONTHS }, () => 0);
+  for (const d of DAYS) out[d.mi]++;
+  return out;
+})();
+
+// Resolve a monthly schedule at month index mi (override wins over base).
+export function monthValue(s: MonthSchedule, mi: number): number {
+  const o = s.overrides[mi];
+  return o === undefined ? s.base : o;
+}
+
+// Cumulative survival fraction of a step-down curve at tick k (percentages in).
 export function tickRet(sd: StepDown, k: number): number {
   if (k <= 0) return 1;
   let f = sd.r1 / 100;
@@ -40,7 +76,7 @@ export function tickRet(sd: StepDown, k: number): number {
   return f * Math.pow(sd.rMature / 100, k - 3);
 }
 
-// Total weekly "billing weeks" a cohort pays over its life (lifetime in weeks).
+// Total "billing ticks" a cohort pays over its life (lifetime in weeks/months).
 export function weeklyLifetime(sd: StepDown, cap = 520): number {
   let sum = 0;
   for (let k = 0; k < cap; k++) {
@@ -60,10 +96,8 @@ export function simulate(p: Params): SimResult {
   const asLow = p.routes.appFeeLow / 100;
   const asHigh = p.routes.appFeeHigh / 100;
   const infra = p.unit.infraPct / 100;
-  const g = p.marketing.budgetGrowthPct / 100;
-  const N = MAXDAYS;
+  const N = NDAYS;
 
-  // Forward-scheduled active counts (difference arrays), billings, txns, cash.
   const diffW = z(N + BUF);
   const diffM = z(N + BUF);
   const diffA = z(N + BUF);
@@ -73,15 +107,19 @@ export function simulate(p: Params): SimResult {
   const txI = z(N + BUF);
   const inflow = z(N + BUF);
 
+  // Daily building blocks (exposed for the statements layer).
   const arr = z(N);
-  const recRevA = z(N);
-  const deferA = z(N);
-  const recvA = z(N);
-  const cashEnd = z(N);
-  const cardEnd = z(N);
-  const spendD = z(N);
+  const recRev = z(N);
+  const adSpend = z(N);
+  const feesDay = z(N);
+  const infraDay = z(N);
+  const billingsDay = z(N);
+  const deferred = z(N);
+  const processorAR = z(N);
+  const cardDebt = z(N);
+  const cashArr = z(N);
+  const distribution = z(N);
 
-  // Per-channel running tallies.
   const base = p.channels.map(baseCAC);
   const chSpend = [0, 0];
   const chCust = [0, 0];
@@ -89,14 +127,12 @@ export function simulate(p: Params): SimResult {
   const chCustM = [0, 0];
   const chCustA = [0, 0];
 
-  // Schedule one cohort of `n` paid customers acquired by channel `ch` on `day`.
   const sched = (ch: Channel, ci: number, day: number, n: number): void => {
     if (n <= 1e-9) return;
-    const fc = day + trialDays; // first charge after trial
+    const fc = day + trialDays;
     const isWeb = ch.route === "WEB";
     const bill = isWeb ? billW : billI;
     const tx = isWeb ? txW : txI;
-    // Plan mix is stored as percentages.
     const nW = (n * ch.mix.weekly) / 100;
     const nM = (n * ch.mix.monthly) / 100;
     const nA = (n * ch.mix.annual) / 100;
@@ -160,48 +196,50 @@ export function simulate(p: Params): SimResult {
   let iapVol = 0;
   let netBillCum = 0;
   let collCum = 0;
-  let D1M = -1;
-  let lastDay = N - 1;
+  let d1m = -1;
+  let peakCard = 0;
 
-  // Card-repayment queue (FIFO by due date). card == sum of outstanding amts.
   const q: { amt: number; due: number }[] = [];
   let head = 0;
 
-  const draw = p.capital.founderDraw;
-  const drawStart = p.capital.drawStartMonth;
   const reserve = p.capital.reserve;
   const limit = p.capital.creditLimit;
   const apDays = p.capital.apDays;
   const share = [p.marketing.paidShare / 100, 1 - p.marketing.paidShare / 100];
 
   for (let d = 0; d < N; d++) {
+    const mi = DAYS[d].mi;
     rW += diffW[d];
     rA += diffA[d];
     rM += diffM[d];
     arr[d] = rW * wPrice * 52 + rA * aPrice + rM * mPrice * 12;
-    const recRev = rW * (wPrice / 7) + rA * (aPrice / 365) + rM * (mPrice / 30);
-    recRevA[d] = recRev;
-    const infraD = recRev * infra;
+    const rev = rW * (wPrice / 7) + rA * (aPrice / 365) + rM * (mPrice / 30);
+    recRev[d] = rev;
+    const infD = rev * infra;
+    infraDay[d] = infD;
     const asFee = arr[d] >= 1e6 ? asHigh : asLow;
 
     const nW = billW[d] * (1 - webFee) - p.routes.webFixed * txW[d];
     const nI = billI[d] * (1 - asFee);
+    const dayFees = billW[d] - Math.max(0, nW) + (billI[d] - nI);
+    feesDay[d] = dayFees;
     feeW += billW[d] - Math.max(0, nW);
     feeI += billI[d] - nI;
     webVol += billW[d];
     iapVol += billI[d];
+    billingsDay[d] = billW[d] + billI[d];
     netBillCum += Math.max(0, nW) + nI;
     if (d + p.routes.webPayoutDays < inflow.length)
       inflow[d + p.routes.webPayoutDays] += Math.max(0, nW);
     if (d + p.routes.appPayoutDays < inflow.length) inflow[d + p.routes.appPayoutDays] += nI;
     billCum += billW[d] + billI[d];
-    recCum += recRev;
-    deferA[d] = Math.max(0, billCum - recCum);
+    recCum += rev;
+    deferred[d] = Math.max(0, billCum - recCum);
 
     const inf = inflow[d];
     cash += inf;
     collCum += inf;
-    recvA[d] = Math.max(0, netBillCum - collCum);
+    processorAR[d] = Math.max(0, netBillCum - collCum);
 
     // Repay card charges due today.
     while (head < q.length && q[head].due <= d) {
@@ -210,9 +248,13 @@ export function simulate(p: Params): SimResult {
       head++;
     }
 
-    // Founder draw on the first of each month once draws have started.
-    if (DAYS[d].first && d > 0 && draw > 0 && DAYS[d].mi >= drawStart) {
-      cash -= draw;
+    // Founder distribution on the first of each month (per the schedule).
+    if (DAYS[d].first) {
+      const draw = monthValue(p.capital.draw, mi);
+      if (draw > 0) {
+        cash -= draw;
+        distribution[d] = draw;
+      }
     }
 
     // Auto-paydown: clear the card toward zero whenever cash sits above reserve.
@@ -234,10 +276,9 @@ export function simulate(p: Params): SimResult {
       head = h;
     }
 
-    // Spend: today's marketing budget, financed on the card, capped by headroom.
-    const target = (p.marketing.monthlyBudget / 30.44) * Math.pow(1 + g, DAYS[d].mi);
-    const headroom = Math.max(0, limit - card);
-    const total = Math.min(target, headroom);
+    // Marketing spend: the month's budget, deployed evenly across its days.
+    const monthBudget = monthValue(p.marketing.budget, mi);
+    const total = DAYS_IN_MONTH[mi] > 0 ? monthBudget / DAYS_IN_MONTH[mi] : 0;
     for (let i = 0; i < 2; i++) {
       const sp = total * share[i];
       if (sp > 0) {
@@ -252,10 +293,11 @@ export function simulate(p: Params): SimResult {
         sched(p.channels[i], i, d, cust);
       }
     }
-    spendD[d] = total;
+    adSpend[d] = total;
 
-    // Charge spend + infra to the card; overflow beyond the limit hits cash.
-    const charge = total + infraD;
+    // Charge spend + infra to the card; overflow beyond the limit hits cash
+    // (cash may go negative — surfaced as insolvency, not auto-prevented).
+    const charge = total + infD;
     let toCard = charge;
     if (card + toCard > limit) {
       const over = card + toCard - limit;
@@ -267,20 +309,15 @@ export function simulate(p: Params): SimResult {
       card += toCard;
     }
 
-    cashEnd[d] = cash;
-    cardEnd[d] = card;
+    cashArr[d] = cash;
+    cardDebt[d] = card;
+    if (card > peakCard) peakCard = card;
     if (cash < minCash) minCash = cash;
     if (cash < -1e-6 && insolventDay < 0) insolventDay = d;
-    if (arr[d] >= 1e6 && D1M < 0) {
-      D1M = d;
-      lastDay = d;
-      break;
-    }
+    if (arr[d] >= 1e6 && d1m < 0) d1m = d;
   }
 
-  const reached = D1M >= 0;
-
-  // ---- Margins & blended unit economics ----
+  // ---- Blended unit economics ----
   const totFees = feeW + feeI;
   const blendedFeeRate = billCum > 0 ? totFees / billCum : 0;
   const gm = Math.max(0, 1 - blendedFeeRate - infra);
@@ -315,62 +352,48 @@ export function simulate(p: Params): SimResult {
   const effAR =
     totVol > 0 ? (webVol * p.routes.webPayoutDays + iapVol * p.routes.appPayoutDays) / totVol : 0;
 
-  // ---- DCF / enterprise value ----
-  const wacc = (p.valuation.rfRate + p.valuation.beta * p.valuation.erp) / 100;
-  const gTerm = p.valuation.termGrowth / 100;
-  const tax = p.valuation.taxRate / 100;
-  let pv = 0;
-  let prevRecv = 0;
-  let prevDef = 0;
   let maxARR = 0;
-  for (let d = 0; d <= lastDay; d++) {
-    if (arr[d] > maxARR) maxARR = arr[d];
-    const ebit = recRevA[d] * gm - spendD[d];
-    const nopat = ebit - (ebit > 0 ? tax * ebit : 0);
-    const dRecv = recvA[d] - prevRecv;
-    const dDef = deferA[d] - prevDef;
-    prevRecv = recvA[d];
-    prevDef = deferA[d];
-    pv += (nopat - dRecv + dDef) / Math.pow(1 + wacc, d / 365);
-  }
-  const horizonARR = reached ? arr[D1M] : maxARR;
-  const termFCF = horizonARR * gm * (1 - tax);
-  const tv = wacc > gTerm ? (termFCF * (1 + gTerm)) / (wacc - gTerm) : termFCF * 40;
-  const pvTV = tv / Math.pow(1 + wacc, lastDay / 365);
-  const EV = pv + pvTV;
-  const evMultiple = horizonARR > 0 ? EV / horizonARR : 0;
-
-  let peakCard = 0;
-  for (let d = 0; d <= lastDay; d++) if (cardEnd[d] > peakCard) peakCard = cardEnd[d];
+  for (let d = 0; d < N; d++) if (arr[d] > maxARR) maxARR = arr[d];
 
   const series: SeriesPoint[] = [];
-  for (let d = 0; d <= lastDay; d++)
-    series.push({ i: d, cash: cashEnd[d], card: -cardEnd[d], arr: arr[d] });
+  for (let d = 0; d < N; d++)
+    series.push({ i: d, cash: cashArr[d], card: -cardDebt[d], arr: arr[d] });
+
+  const daily: DailyBlocks = {
+    arr,
+    recRev,
+    adSpend,
+    fees: feesDay,
+    infra: infraDay,
+    billings: billingsDay,
+    deferred,
+    processorAR,
+    cardDebt,
+    cash: cashArr,
+    distribution,
+  };
 
   return {
+    days: N,
+    daily,
     series,
-    lastDay,
     sum: {
-      reached,
-      D1M: reached ? D1M : lastDay,
-      D1Mdate: reached ? DAYS[D1M].date : null,
-      monthsElapsed: (reached ? D1M : lastDay) / 30.44,
-      horizonARR,
+      d1m,
+      d1mDate: d1m >= 0 ? DAYS[d1m].date : null,
+      endARR: arr[N - 1],
       maxARR,
-      endCash: cashEnd[lastDay],
+      endCash: cashArr[N - 1],
       minCash,
-      peakCard,
+      peakFunding: Math.max(0, -minCash),
       insolventDay,
       insolventDate: insolventDay >= 0 ? DAYS[insolventDay].date : null,
+      peakCard,
       blendedCAC,
       ltv,
       ltvCac,
       gm,
       totSpend,
       paybackWk,
-      EV,
-      evMultiple,
-      wacc: wacc * 100,
       effAR,
       blW,
       blA,
@@ -380,6 +403,8 @@ export function simulate(p: Params): SimResult {
       feeI,
       webVol,
       iapVol,
+      billCum,
+      blendedFeeRate,
       perCh: p.channels.map((c, i) => ({
         name: c.name,
         color: c.color,
@@ -390,80 +415,4 @@ export function simulate(p: Params): SimResult {
       })),
     },
   };
-}
-
-// A run is feasible if cash never goes negative across the whole timeline.
-export function feasible(r: SimResult): boolean {
-  return r.sum.insolventDay < 0;
-}
-
-export interface Solved {
-  result: SimResult;
-  throttled: boolean; // true if the nominal budget was reduced for solvency
-  safeBudget: number; // the monthly budget actually deployed
-}
-
-// The render path: deploy the nominal marketing budget if it stays solvent,
-// otherwise throttle down to the maximum budget the working capital can safely
-// sustain. The engine never shows an insolvent state from ad spend — only a
-// founder draw that is too large can break solvency.
-export function solve(p: Params): Solved {
-  const full = simulate(p);
-  if (feasible(full)) {
-    return { result: full, throttled: false, safeBudget: p.marketing.monthlyBudget };
-  }
-  const sb = maxBudget(p);
-  const result = simulate({
-    ...p,
-    marketing: { ...p.marketing, monthlyBudget: sb },
-  });
-  return { result, throttled: true, safeBudget: sb };
-}
-
-// Largest monthly marketing budget that stays solvent (binary search).
-export function maxBudget(p: Params): number {
-  let lo = 0;
-  let hi = 5_000_000;
-  for (let i = 0; i < 22; i++) {
-    const mid = (lo + hi) / 2;
-    const r = simulate({ ...p, marketing: { ...p.marketing, monthlyBudget: mid } });
-    if (feasible(r)) lo = mid;
-    else hi = mid;
-  }
-  return lo;
-}
-
-// Largest sustainable monthly founder draw (binary search).
-export function maxDraw(p: Params): number {
-  let lo = 0;
-  let hi = 200_000;
-  for (let i = 0; i < 20; i++) {
-    const mid = (lo + hi) / 2;
-    const r = simulate({ ...p, capital: { ...p.capital, founderDraw: mid } });
-    if (feasible(r)) lo = mid;
-    else hi = mid;
-  }
-  return lo;
-}
-
-// Goal-seek: push budget to the safe maximum and search the paid/organic split
-// for the allocation that maximises enterprise value. Returns inputs to apply.
-export function optimize(p: Params): { paidShare: number; monthlyBudget: number } {
-  let best: { paidShare: number; monthlyBudget: number; ev: number } | null = null;
-  for (let s = 0; s <= 100; s += 5) {
-    const withShare: Params = {
-      ...p,
-      marketing: { ...p.marketing, paidShare: s },
-    };
-    const budget = maxBudget(withShare);
-    const r = simulate({
-      ...withShare,
-      marketing: { ...withShare.marketing, monthlyBudget: budget },
-    });
-    if (feasible(r) && (!best || r.sum.EV > best.ev)) {
-      best = { paidShare: s, monthlyBudget: budget, ev: r.sum.EV };
-    }
-  }
-  if (!best) return { paidShare: p.marketing.paidShare, monthlyBudget: 0 };
-  return { paidShare: best.paidShare, monthlyBudget: best.monthlyBudget };
 }

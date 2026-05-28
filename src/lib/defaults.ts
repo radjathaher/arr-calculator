@@ -20,9 +20,6 @@ export const T = {
 // Funnel conversions are percentages. Defaults seeded from public benchmarks
 // (RevenueCat / Adapty 2026, and the Sideshift UGC case study).
 
-// Paid ads: pricier impressions, but the algorithm targets ready-to-buy users
-// who skew annual and retain a little better. Routes to the web checkout.
-//   CPM $20, imp->install 0.8% => CPI ~$2.50; install->paid ~4%; CAC ~$63.
 const PAID: Channel = {
   name: "Paid ads",
   route: "WEB",
@@ -38,9 +35,6 @@ const PAID: Channel = {
   color: T.teal,
 };
 
-// Organic / UGC: dirt-cheap views but sprays indiscriminately, so conversion
-// is lower and churn higher. Bills through the slower, higher-fee app store.
-//   CPM $0.56, view->install 0.27% => CPI ~$0.21; install->paid ~2.8%; CAC ~$7.4.
 const ORGANIC: Channel = {
   name: "Organic / UGC",
   route: "APP",
@@ -72,10 +66,12 @@ export const DEFAULT_PARAMS: Params = {
     creditLimit: 20000,
     apDays: 30,
     reserve: 0,
-    founderDraw: 0,
-    drawStartMonth: 6,
+    draw: { base: 0, overrides: {} },
   },
-  marketing: { monthlyBudget: 12000, budgetGrowthPct: 0, paidShare: 40 },
+  marketing: {
+    budget: { base: 12000, overrides: {} },
+    paidShare: 40,
+  },
   unit: { infraPct: 10 },
   valuation: { rfRate: 5.03, erp: 4.23, beta: 1.69, taxRate: 21, termGrowth: 3 },
   channels: [PAID, ORGANIC],

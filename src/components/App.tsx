@@ -11,9 +11,11 @@ export function App() {
       <header className="hdr">
         <div>
           <h1>Cash &amp; ARR Studio</h1>
-          <p>How big can a subscription app get on a credit line? · auto-extends to $1M ARR</p>
+          <p>A subscription app, from $0 to a three-statement model · Jun 2026 → Dec 2030</p>
         </div>
-        <div className="tabs">
+      </header>
+      <nav className="pillnav">
+        <div className="pillnav-inner">
           <button className={tab === "explain" ? "on" : ""} onClick={() => setTab("explain")}>
             Explainer
           </button>
@@ -21,7 +23,7 @@ export function App() {
             Model
           </button>
         </div>
-      </header>
+      </nav>
       {tab === "explain" ? <ExplainerTab /> : <ModelTab />}
     </div>
   );

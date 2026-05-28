@@ -1,0 +1,202 @@
+/* ---- v6: 3-statement model UI ---- */
+
+/* Large centered segmented pill tab selector */
+.pillnav {
+  display: flex;
+  justify-content: center;
+  margin: 4px auto 16px;
+}
+.pillnav-inner {
+  display: inline-flex;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(26, 23, 18, 0.06);
+}
+.pillnav button {
+  border: none;
+  background: none;
+  padding: 9px 26px;
+  font-family: "IBM Plex Sans";
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.pillnav button.on {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* KPI strip */
+.kpi-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kpi-group-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin: 2px 0 -2px;
+}
+
+/* Statement / schedule tables */
+.stmt-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel);
+}
+table.stmt {
+  border-collapse: collapse;
+  font-family: "IBM Plex Mono";
+  font-size: 11px;
+  width: max-content;
+  min-width: 100%;
+}
+table.stmt th,
+table.stmt td {
+  padding: 5px 9px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+table.stmt thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  color: var(--muted);
+  font-weight: 600;
+  z-index: 2;
+}
+table.stmt .rowlabel,
+table.stmt thead th.rowlabel {
+  position: sticky;
+  left: 0;
+  text-align: left;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: "IBM Plex Sans";
+  font-weight: 500;
+  z-index: 1;
+  min-width: 150px;
+}
+table.stmt thead th.rowlabel {
+  background: var(--bg);
+  z-index: 3;
+}
+table.stmt tr.total td,
+table.stmt tr.total .rowlabel {
+  font-weight: 700;
+  border-top: 1.5px solid var(--ink);
+}
+table.stmt tr.sub .rowlabel {
+  padding-left: 20px;
+  color: var(--muted);
+}
+table.stmt td.neg {
+  color: var(--danger);
+}
+table.stmt tr.spacer td {
+  height: 6px;
+  border: none;
+}
+
+/* Schedule grain toggle */
+.grain {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--panel);
+}
+.grain button {
+  border: none;
+  background: none;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: "IBM Plex Mono";
+  color: var(--muted);
+  cursor: pointer;
+}
+.grain button.on {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* DCF summary */
+.dcf-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+/* Month-override grid */
+.mgrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mgrid-base {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mgrid-year {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mgrid-year-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: "IBM Plex Mono";
+}
+.mgrid-cells {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 3px;
+}
+.mgrid-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.mgrid-cell span {
+  font-size: 8px;
+  color: var(--muted);
+  text-align: center;
+  font-family: "IBM Plex Mono";
+}
+.mgrid-cell input {
+  width: 100%;
+  font-size: 10px;
+  padding: 2px 2px;
+  text-align: right;
+}
+.mgrid-cell input.overridden {
+  border-color: var(--teal);
+  background: #eef6f4;
+  font-weight: 600;
+}
+
+.flywheel {
+  display: block;
+  margin: 0 auto;
+  animation: spin linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

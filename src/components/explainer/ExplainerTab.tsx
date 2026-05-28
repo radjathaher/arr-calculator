@@ -202,6 +202,39 @@ export function ExplainerTab() {
           of bridge cash?
         </p>
 
+        {/* ---------------- ACT V ---------------- */}
+        <span className="act-tag">Act V</span>
+        <h2>How it all becomes a financial statement</h2>
+        <p>
+          Everything so far — every stranger bought, every weekly charge, every slow app-store
+          payout — is just <i>cash and timing</i>. Accountants have a tidy way to file all of it,
+          and it is the same three pages every real company reports.
+        </p>
+        <p>
+          The <b>income statement</b> asks: did you make a profit? It counts revenue when you{" "}
+          <i>earn</i> it — a year of an annual plan is recognised one month at a time — subtracts
+          the fees and infra it cost, then the ad spend, and what is left is your margin.
+        </p>
+        <p>
+          The <b>balance sheet</b> is a snapshot of what you own and owe on a given day: cash in the
+          bank, money the app store still owes you, the year of service you were paid for but have
+          not yet delivered (<i>deferred revenue</i>), and the credit-card balance financing it all.
+          The two sides always tie out.
+        </p>
+        <p>
+          The <b>cash flow statement</b> is the honest one. Profit is an opinion; cash is a fact. It
+          starts from profit and walks back to the money that actually moved — adding back the
+          annual cash you collected early, subtracting the receivables stuck at the app store, and
+          your own draw at the end. Its bottom line is the cash balance you watched rise and fall.
+        </p>
+        <p>
+          And the <b>valuation</b> is just that cash flow read into the future and pulled back to
+          today: every month of free cash flow from now to 2030, discounted because a dollar later
+          is worth less than a dollar now, plus a terminal value for everything after — summed into
+          one number for what the whole machine is worth. The cohorts you met in Act I flow,
+          automatically, into all four.
+        </p>
+
         {/* ---------------- CLOSING ---------------- */}
         <span className="act-tag">The five gears</span>
         <h2>Now go turn them</h2>
@@ -228,8 +261,9 @@ export function ExplainerTab() {
         </ol>
         <p className="z-end">
           You came in praying for users. You leave knowing the real game is <b>dollars and days</b>.
-          Open the <b>Model</b> tab, set your dials, and hit <b>Optimize</b> — and find out how far
-          a single stranger, bought on borrowed time, can take you.
+          Open the <b>Model</b> tab, set your two dials — how much you spend and how much you draw —
+          and watch the statements move as a single stranger, bought on borrowed time, compounds
+          into a company.
         </p>
       </article>
     </div>

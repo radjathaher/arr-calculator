@@ -1,49 +1,38 @@
+import { useState } from "react";
 import type { Params } from "../../lib/types";
 import type { Currency } from "../../lib/format";
-import { money } from "../../lib/format";
-import { START } from "../../lib/engine";
 import { NI, Sec } from "../atoms";
 import { ChannelEditor } from "./ChannelEditor";
 
-const MONTHS: string[] = (() => {
-  const out: string[] = [];
-  let d = new Date(START);
-  for (let k = 0; k < 61; k++) {
-    out.push(
-      d.toLocaleString("en-US", { month: "short" }) + " '" + String(d.getFullYear()).slice(2),
-    );
-    d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-  }
-  return out;
-})();
-
 type Upd = (mut: (p: Params) => void) => void;
 
-export function Controls({
+export function Assumptions({
   params,
   upd,
-  open,
-  tog,
   cur,
   fx,
-  maxDrawVal,
 }: {
   params: Params;
   upd: Upd;
-  open: Record<string, boolean>;
-  tog: (k: string) => void;
   cur: Currency;
   fx: number;
-  maxDrawVal: number;
 }) {
   const p = params;
+  const [open, setOpen] = useState<Record<string, boolean>>({
+    cap: false,
+    price: false,
+    paid: false,
+    org: false,
+    fee: false,
+    unit: false,
+    dcf: false,
+  });
+  const tog = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   const wacc = p.valuation.rfRate + p.valuation.beta * p.valuation.erp;
-  const drawTooHigh = p.capital.founderDraw > maxDrawVal + 1;
-  const C = (n: number) => money(n, cur, fx);
 
   return (
     <div className="controls">
-      <Sec title="Capital & withdrawal" open={open.cap} onToggle={() => tog("cap")}>
+      <Sec title="Capital, allocation & currency" open={open.cap} onToggle={() => tog("cap")}>
         <div className="ni-row">
           <NI
             label="Start cash"
@@ -76,50 +65,6 @@ export function Controls({
         </div>
         <div className="ni-row">
           <NI
-            label="Founder draw/mo"
-            value={p.capital.founderDraw}
-            step={250}
-            width={72}
-            onChange={(v) => upd((q) => (q.capital.founderDraw = v))}
-          />
-          <label className="ni">
-            <span>Draw starts</span>
-            <select
-              className="nospin"
-              value={p.capital.drawStartMonth}
-              onChange={(e) =>
-                upd((q) => (q.capital.drawStartMonth = Number.parseInt(e.target.value)))
-              }
-            >
-              {MONTHS.map((m, j) => (
-                <option key={j} value={j}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className={drawTooHigh ? "hint bad" : "hint ok"}>max ≈ {C(maxDrawVal)}/mo</span>
-        </div>
-      </Sec>
-
-      <Sec title="Marketing budget" open={open.mkt} onToggle={() => tog("mkt")}>
-        <div className="ni-row">
-          <NI
-            label="Budget/mo"
-            value={p.marketing.monthlyBudget}
-            step={500}
-            width={78}
-            onChange={(v) => upd((q) => (q.marketing.monthlyBudget = v))}
-          />
-          <NI
-            label="Ramp/mo"
-            value={p.marketing.budgetGrowthPct}
-            step={1}
-            width={48}
-            suffix="%"
-            onChange={(v) => upd((q) => (q.marketing.budgetGrowthPct = v))}
-          />
-          <NI
             label="Paid share"
             value={p.marketing.paidShare}
             step={5}
@@ -128,11 +73,13 @@ export function Controls({
             onChange={(v) => upd((q) => (q.marketing.paidShare = Math.max(0, Math.min(100, v))))}
           />
           <span className="lblmono">organic {100 - p.marketing.paidShare}%</span>
-        </div>
-        <div className="inline-note">
-          Budget is financed on the card and capped by safe credit headroom. If it exceeds what your
-          working capital can sustain, it is throttled to stay solvent. Hit <b>Optimize</b> to push
-          to the safe maximum and best paid/organic split.
+          <NI
+            label="IDR per USD"
+            value={p.fx}
+            step={10}
+            width={70}
+            onChange={(v) => upd((q) => (q.fx = v))}
+          />
         </div>
       </Sec>
 
@@ -255,9 +202,8 @@ export function Controls({
           />
         </div>
         <div className="inline-note">
-          LTV, CAC, payback and margin in the cards above are derived from the funnels, plans and
-          retention. Infra is the one plugged cost — hosting/AI/support as a share of recognised
-          revenue.
+          COGS = recognised revenue × (blended payment-fee rate + infra %). LTV/CAC/payback/margin
+          are derived from the funnels, plans and retention.
         </div>
       </Sec>
 
@@ -306,10 +252,8 @@ export function Controls({
           />
         </div>
         <div className="inline-note">
-          Enterprise value is every future dollar the business earns, discounted to today. Faster
-          cash is worth more, so quick web payouts beat slow app-store ones. WACC = risk-free + β ×
-          ERP (Damodaran method); terminal value uses Gordon growth, cross-checked against the
-          implied ARR multiple.
+          Unlevered FCF discounted monthly to enterprise value; terminal value = Gordon growth, with
+          the implied ARR multiple shown as a cross-check.
         </div>
       </Sec>
     </div>

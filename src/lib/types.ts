@@ -1,15 +1,15 @@
-// Domain types for the Cash & ARR Studio simulation engine.
-// The model is a daily cohort simulation of a cash-constrained consumer
-// subscription app, run until it reaches $1M ARR (or a 5-year cap).
+// Domain types for the Cash & ARR Studio engine.
+// A daily cohort simulation of a cash-constrained consumer subscription app,
+// run over a fixed horizon (Jun 2026 -> Dec 2030) and rolled up into a full
+// monthly three-statement financial model + DCF.
 
 export type RouteKind = "WEB" | "APP";
 export type PlanKind = "weekly" | "monthly" | "annual";
 
-// A step-down retention curve for a recurring (weekly/monthly) plan.
-// Values are per-tick survival fractions (0..1). The brutal first renewal,
-// then it stabilises into a mature rate. This curve is a property of the
-// channel x plan cell: it proxies the unobservable customer quality revealed
-// by both how a user was acquired and which plan they self-selected into.
+// Per-tick survival fractions (percentages, e.g. 55 = 55%). The brutal first
+// renewal, then it stabilises. A property of the channel x plan cell: it proxies
+// the unobservable customer quality revealed by both how a user was acquired and
+// which plan they self-selected into.
 export interface StepDown {
   r1: number;
   r2: number;
@@ -17,23 +17,21 @@ export interface StepDown {
   rMature: number;
 }
 
-// Retention for every plan a single channel can sell.
 export interface ChannelRetention {
   weekly: StepDown;
   monthly: StepDown;
-  annualRenewal: number; // per-year renewal fraction (0..1)
+  annualRenewal: number; // per-year renewal fraction (percentage)
 }
 
-// Acquisition funnel for one channel. Conversions are fractions (0..1).
 export interface Funnel {
   cpm: number; // cost per 1,000 impressions, USD
-  impToInstall: number;
+  impToInstall: number; // percentages
   installToTrial: number;
   trialToPaid: number;
 }
 
 export interface PlanMix {
-  weekly: number; // fractions, should sum to ~1
+  weekly: number; // percentages, ~sum to 100
   monthly: number;
   annual: number;
 }
@@ -44,11 +42,8 @@ export interface Channel {
   funnel: Funnel;
   mix: PlanMix;
   retention: ChannelRetention;
-  // Saturation: below satPoint daily spend, CAC is flat; above it, marginal
-  // CAC climbs as (spend/satPoint)^satSlope. Kills the "infinite cheap
-  // organic" exploit.
   satPoint: number; // daily spend ($/day) where CAC begins to climb
-  satSlope: number; // steepness exponent (0 = no climb)
+  satSlope: number; // steepness exponent
   color: string;
 }
 
@@ -60,27 +55,32 @@ export interface Plans {
 }
 
 export interface Routes {
-  webFeePct: number; // %
-  webFixed: number; // $ per transaction
+  webFeePct: number;
+  webFixed: number;
   webPayoutDays: number;
-  appFeeLow: number; // % while ARR < $1M
-  appFeeHigh: number; // % once ARR >= $1M
+  appFeeLow: number;
+  appFeeHigh: number;
   appPayoutDays: number;
 }
 
+// A time-varying monthly input: a base value applied to every month, plus
+// sparse per-month overrides keyed by month index (0 = Jun 2026).
+export interface MonthSchedule {
+  base: number;
+  overrides: Record<number, number>;
+}
+
 export interface Capital {
-  startCash: number;
+  startCash: number; // initial paid-in equity
   creditLimit: number;
-  apDays: number; // vendor payment terms — card float in days
-  reserve: number; // minimum cash floor to keep
-  founderDraw: number; // monthly founder withdrawal
-  drawStartMonth: number; // month index (0 = first month) draws begin
+  apDays: number; // vendor terms / card float
+  reserve: number; // cash kept before auto-paying down the card
+  draw: MonthSchedule; // founder monthly distribution
 }
 
 export interface Marketing {
-  monthlyBudget: number; // base marketing $/month
-  budgetGrowthPct: number; // % ramp per month
-  paidShare: number; // % of budget to the paid channel (rest to organic)
+  budget: MonthSchedule; // monthly marketing spend
+  paidShare: number; // % of budget to the paid channel (rest organic)
 }
 
 export interface UnitEcon {
@@ -88,11 +88,11 @@ export interface UnitEcon {
 }
 
 export interface Valuation {
-  rfRate: number; // risk-free %
-  erp: number; // equity risk premium %
+  rfRate: number;
+  erp: number;
   beta: number;
-  taxRate: number; // %
-  termGrowth: number; // terminal growth %
+  taxRate: number;
+  termGrowth: number;
 }
 
 export interface Params {
@@ -106,10 +106,12 @@ export interface Params {
   channels: [Channel, Channel]; // [paid, organic]
 }
 
+// ---- Simulation outputs ----
+
 export interface SeriesPoint {
-  i: number; // day index
+  i: number;
   cash: number;
-  card: number; // negative (drawn below zero on charts)
+  card: number; // negative for charting
   arr: number;
 }
 
@@ -122,41 +124,56 @@ export interface ChannelResult {
   cac: number;
 }
 
+// Daily building-block series (length = number of simulated days). These are the
+// raw materials the statements layer buckets into months.
+export interface DailyBlocks {
+  arr: Float64Array; // annual run-rate at end of day
+  recRev: Float64Array; // recognised revenue that day
+  adSpend: Float64Array; // marketing spend that day
+  fees: Float64Array; // payment/platform fees incurred that day (cash basis)
+  infra: Float64Array; // infra cost that day (% of recognised rev)
+  billings: Float64Array; // gross billings that day
+  deferred: Float64Array; // deferred-revenue balance, end of day
+  processorAR: Float64Array; // processor receivable balance, end of day
+  cardDebt: Float64Array; // card/credit balance, end of day
+  cash: Float64Array; // cash balance, end of day
+  distribution: Float64Array; // founder distribution that day
+}
+
 export interface SimSummary {
-  reached: boolean;
-  D1M: number; // day index ARR hit $1M (or lastDay if unreached)
-  D1Mdate: Date | null;
-  monthsElapsed: number;
-  horizonARR: number;
+  d1m: number; // first day index ARR >= $1M (-1 if never)
+  d1mDate: Date | null;
+  endARR: number;
   maxARR: number;
   endCash: number;
   minCash: number;
-  peakCard: number;
+  peakFunding: number; // max external cash needed = max(0, -minCash)
   insolventDay: number;
   insolventDate: Date | null;
+  peakCard: number;
   blendedCAC: number;
   ltv: number;
   ltvCac: number;
-  gm: number; // gross margin (0..1)
+  gm: number;
   totSpend: number;
   paybackWk: number;
-  EV: number;
-  evMultiple: number; // implied ARR multiple (DCF cross-check)
-  wacc: number; // %
-  effAR: number; // blended effective AR (payout) days
-  blW: number; // blended weekly plan share (0..1)
-  blA: number; // blended annual plan share (0..1)
-  Lwbl: number; // blended weekly lifetime (weeks)
+  effAR: number;
+  blW: number;
+  blA: number;
+  Lwbl: number;
   totVol: number;
-  feeW: number; // total web fees
-  feeI: number; // total in-app fees
+  feeW: number;
+  feeI: number;
   webVol: number;
   iapVol: number;
+  billCum: number;
+  blendedFeeRate: number;
   perCh: ChannelResult[];
 }
 
 export interface SimResult {
+  days: number; // number of simulated days
+  daily: DailyBlocks;
   series: SeriesPoint[];
-  lastDay: number;
   sum: SimSummary;
 }
