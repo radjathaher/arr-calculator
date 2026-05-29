@@ -4,11 +4,11 @@ import type { Currency } from "../../lib/format";
 import { simulate } from "../../lib/model";
 import { DEFAULT_PARAMS } from "../../lib/defaults";
 import { decodeParams, encodeParams, hasBlankInputs } from "../../lib/urlState";
-import { NI, Sec } from "../atoms";
+import { NI } from "../atoms";
 import { Results } from "./results";
 import { ArrChart } from "./arr-chart";
 import { CashChart } from "./cash-chart";
-import { CashFlowTable } from "./cashflow-table";
+import { Statements } from "./statements";
 import { FunnelBlock } from "./funnel-block";
 import { Assumptions } from "./assumptions";
 
@@ -19,7 +19,6 @@ export function ModelTab() {
       : decodeParams(window.location.search.replace(/^\?/, "")),
   );
   const [cur, setCur] = useState<Currency>("USD");
-  const [cfOpen, setCfOpen] = useState(false);
 
   const upd = (mut: (p: Params) => void) =>
     setParams((prev) => {
@@ -69,16 +68,16 @@ export function ModelTab() {
           onChange={(v) => upd((q) => (q.arrGoal = v))}
         />
         <NI
-          label="paid $/mo"
-          value={params.marketing.paidBudget}
+          label="paid $/day"
+          value={params.marketing.paidDaily}
           width={84}
-          onChange={(v) => upd((q) => (q.marketing.paidBudget = v))}
+          onChange={(v) => upd((q) => (q.marketing.paidDaily = v))}
         />
         <NI
-          label="organic $/mo"
-          value={params.marketing.organicBudget}
+          label="organic $/day"
+          value={params.marketing.organicDaily}
           width={84}
-          onChange={(v) => upd((q) => (q.marketing.organicBudget = v))}
+          onChange={(v) => upd((q) => (q.marketing.organicDaily = v))}
         />
         <NI
           label="grow spend %/mo"
@@ -114,9 +113,7 @@ export function ModelTab() {
 
       {sim && (
         <div className="controls">
-          <Sec title="Cash-flow statement" open={cfOpen} onToggle={() => setCfOpen((o) => !o)}>
-            <CashFlowTable sim={sim} cur={cur} fx={fx} />
-          </Sec>
+          <Statements sim={sim} cur={cur} fx={fx} />
         </div>
       )}
 

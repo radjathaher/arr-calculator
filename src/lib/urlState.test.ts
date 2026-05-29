@@ -14,7 +14,7 @@ describe("urlState", () => {
     p.channels[1].retention.annual.rMature = 77;
     p.channels[0].trials.weekly = 7;
     p.channels[1].trials.annual = 14;
-    p.marketing.paidBudget = 9000;
+    p.marketing.paidDaily = 9000;
     p.capital.founderDraw = 2500;
     p.arrGoal = 500_000;
 
@@ -24,7 +24,7 @@ describe("urlState", () => {
     expect(back.channels[1].retention.annual.rMature).toBe(77);
     expect(back.channels[0].trials.weekly).toBe(7);
     expect(back.channels[1].trials.annual).toBe(14);
-    expect(back.marketing.paidBudget).toBe(9000);
+    expect(back.marketing.paidDaily).toBe(9000);
     expect(back.capital.founderDraw).toBe(2500);
     expect(back.arrGoal).toBe(500_000);
     expect(back.channels[1].prices.wPrice).toBe(DEFAULT_PARAMS.channels[1].prices.wPrice);

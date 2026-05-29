@@ -70,18 +70,19 @@ export function EngineDocs() {
           so a worse rate multiplies cost:
         </p>
         <pre className="expl-code">
-          {`CPI        = cpm / 1000 ÷ (impToInstall%)
-cost/trial = CPI       ÷ (installToTrial%)
-CAC        = cost/trial ÷ (trialToPaid%)
+          {`CPI           = CPM / 1000 ÷ (impression-to-install %)
+cost-per-trial = CPI         ÷ (install-to-trial %)
+CAC            = cost-per-trial ÷ (trial-to-paid %)
 
 customers acquired = adSpend ÷ CAC`}
         </pre>
         <p>
-          With the paid defaults (<code>cpm 20</code>, <code>impToInstall 0.8%</code>,{" "}
-          <code>installToTrial 13.3%</code>, <code>trialToPaid 30%</code>): CPI{" "}
-          <code>$2.50</code> → cost/trial <code>$18.80</code> → CAC <code>≈$63</code>. There is no
-          saturation curve here in the explainer's example — spend in, customers out, in fixed
-          proportion. Cheaper customers (better creative CVR) shift every downstream number.
+          With the paid defaults (<code>CPM 20</code>, <code>impression-to-install 0.8%</code>,{" "}
+          <code>install-to-trial 13.3%</code>, <code>trial-to-paid 30%</code>): CPI{" "}
+          <code>$2.50</code> → cost-per-trial <code>$18.80</code> → CAC <code>≈$63</code>. There is
+          no saturation curve here in the explainer's example — spend in, customers out, in fixed
+          proportion. Cheaper customers (better creative CVR) shift every downstream number, all the
+          way through to <code>blended LTV</code>.
         </p>
       </Domain>
 

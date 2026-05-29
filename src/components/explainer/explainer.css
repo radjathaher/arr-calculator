@@ -47,177 +47,134 @@
   color: var(--teal);
 }
 
-/* ---- Scrollytelling story --------------------------------------------- */
-.expl-story {
-  margin: 0;
+/* ---- Static concept sections ------------------------------------------ */
+.expl-concept {
+  padding: 40px 8px 8px;
+  border-bottom: 1px solid var(--line);
 }
-.expl-scroll-wrap {
-  position: relative;
+.expl-concept-tag {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--teal);
+  display: block;
+  margin-bottom: 6px;
 }
-.expl-sticky {
-  position: sticky;
-  top: 0;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 22px;
-  padding: 30px 8px;
+.expl-concept h2 {
+  font-family: "Fraunces", serif;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 2px 0 16px;
+  color: var(--ink);
+  letter-spacing: -0.5px;
+}
+.expl-concept p {
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: #3a342b;
+  margin: 0 0 16px;
+}
+.expl-concept b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.expl-concept i {
+  color: var(--orange);
+  font-style: italic;
+}
+.expl-list {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+.expl-list li {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #3a342b;
+  margin-bottom: 8px;
 }
 
-/* Two-lane timeline */
-.expl-two-timeline {
+/* Pray vs. acquire two-column comparison */
+.expl-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 4px 0 16px;
+}
+.expl-split-col {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 18px 16px;
+  border-top: 3px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
 }
-.expl-tl-row {
+.expl-split-head {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.expl-split-col p {
+  margin: 0 0 8px;
+}
+.expl-split-col .expl-list {
+  margin-bottom: 0;
+}
+
+/* Cash-gap still diagram */
+.expl-cash {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 4px 0 12px;
+}
+.expl-cash-row {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 58px 1fr;
   align-items: center;
   gap: 10px;
   margin: 8px 0;
 }
-.expl-tl-label {
+.expl-cash-label {
   font-family: "IBM Plex Mono", monospace;
   font-size: 10px;
-  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 600;
 }
-.expl-tl-track {
+.expl-cash-bar {
   position: relative;
-  height: 34px;
+  height: 28px;
   background: var(--bg);
   border-radius: 8px;
 }
-.expl-tl-marker {
+.expl-cash-mark {
   position: absolute;
-  top: 6px;
-  transform: translateX(-50%);
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 50%;
+  transform: translateY(-50%);
   font-family: "IBM Plex Mono", monospace;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 600;
-  border: 1.5px solid transparent;
-  border-radius: 5px;
-  padding: 0 6px;
   white-space: nowrap;
-  background: var(--panel);
-  opacity: 0.25;
-  transition:
-    opacity 0.4s ease,
-    box-shadow 0.3s ease,
-    transform 0.3s ease;
+  color: var(--ink);
 }
-.expl-tl-marker.on {
-  opacity: 1;
+.expl-cash-out {
+  color: var(--danger);
 }
-.expl-tl-marker.cur {
-  transform: translateX(-50%) scale(1.12);
-  box-shadow: 0 0 0 3px var(--bg);
-  z-index: 2;
-}
-.expl-tl-axis {
+.expl-cash-axis {
   position: relative;
   height: 14px;
-  margin: 2px 0 2px 82px;
+  margin: 6px 0 0 68px;
 }
-.expl-tl-axis span {
+.expl-cash-axis span {
   position: absolute;
   transform: translateX(-50%);
   font-family: "IBM Plex Mono", monospace;
   font-size: 9px;
   color: var(--muted);
-}
-
-/* Live beat prose (animated) */
-.expl-beat-live {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--teal);
-  border-radius: 12px;
-  padding: 18px 20px;
-  animation: expl-fade 0.45s ease;
-}
-@keyframes expl-fade {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.expl-beat-chip,
-.expl-beat .expl-beat-chip {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.expl-beat-live h3,
-.expl-beat h3 {
-  font-family: "Fraunces", serif;
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0 0 10px;
-  color: var(--ink);
-  letter-spacing: -0.3px;
-}
-.expl-beat-live p,
-.expl-beat p {
-  font-size: 15.5px;
-  line-height: 1.7;
-  color: #3a342b;
-  margin: 0;
-}
-.expl-beat-live b,
-.expl-beat b {
-  color: var(--ink);
-  font-weight: 600;
-}
-.expl-beat-live i,
-.expl-beat i {
-  color: var(--orange);
-  font-style: italic;
-}
-.expl-beat-progress {
-  display: flex;
-  gap: 5px;
-  margin-top: 16px;
-}
-.expl-beat-progress span {
-  width: 18px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--line);
-  transition: background 0.3s ease;
-}
-.expl-beat-progress span.on {
-  background: var(--teal);
-}
-
-/* Reduced-motion static fallback */
-.expl-beats-static {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
-}
-.expl-beat {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--teal);
-  border-radius: 12px;
-  padding: 16px 18px;
 }
 
 /* ---- Engine docs ------------------------------------------------------- */
@@ -315,27 +272,18 @@
   font-weight: 600;
 }
 
-/* ---- Reduced motion ---------------------------------------------------- */
-@media (prefers-reduced-motion: reduce) {
-  .expl-beat-live,
-  .expl-tl-marker {
-    animation: none;
-    transition: none;
-  }
-}
-
 /* ---- Narrow screens ---------------------------------------------------- */
 @media (max-width: 760px) {
   .expl-hero h1 {
     font-size: 34px;
   }
+  .expl-concept h2 {
+    font-size: 23px;
+  }
   .expl-docs-head h2 {
     font-size: 24px;
   }
-  .expl-tl-row {
-    grid-template-columns: 56px 1fr;
-  }
-  .expl-tl-axis {
-    margin-left: 66px;
+  .expl-split {
+    grid-template-columns: 1fr;
   }
 }

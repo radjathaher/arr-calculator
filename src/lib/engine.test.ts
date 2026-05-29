@@ -63,8 +63,8 @@ describe("simulate — run to target", () => {
 describe("simulate — net cash & credit", () => {
   it("operations never breach the credit floor — no draw, no insolvency", () => {
     const p = clone();
-    p.marketing.paidBudget = 1e9;
-    p.marketing.organicBudget = 1e9;
+    p.marketing.paidDaily = 1e9;
+    p.marketing.organicDaily = 1e9;
     p.capital.founderDraw = 0;
     const r = simulate(p);
     expect(Number.isFinite(r.sum.endARR)).toBe(true);
@@ -77,8 +77,8 @@ describe("simulate — net cash & credit", () => {
 
   it("a founder draw can push below −creditLimit → insolvent", () => {
     const p = clone();
-    p.marketing.paidBudget = 0;
-    p.marketing.organicBudget = 0;
+    p.marketing.paidDaily = 0;
+    p.marketing.organicDaily = 0;
     p.capital.startCash = 0;
     p.capital.creditLimit = 20000;
     p.capital.founderDraw = 5000;

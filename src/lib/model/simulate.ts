@@ -1,11 +1,15 @@
 import type { CashFlowRow, Channel, Params, SeriesPoint, SimResult } from "../types";
 import { dstr } from "../format";
-import { DAYS, DAYS_IN_MONTH, NDAYS } from "./calendar";
+import { DAYS, NDAYS } from "./calendar";
 import { baseCAC } from "./acquisition/baseCac";
 import { tickRet } from "./retention/tickRet";
 import { buildWebPayMap } from "./payout/webPayout";
 import { buildIapPayMap } from "./payout/iapPayout";
 import { wacc } from "./valuation/wacc";
+import type { DailyLedger } from "./statements/dailyLedger";
+import { buildIncomeStatement } from "./statements/incomeStatement";
+import { buildBalanceSheet } from "./statements/balanceSheet";
+import { rollupCashFlow } from "./statements/rollups";
 
 const BUF = 400; // slack for forward-scheduled billings / payout lags
 const z = (n: number): Float64Array => new Float64Array(n);
@@ -39,6 +43,7 @@ export function simulate(p: Params): SimResult {
   const recRev = z(N);
   const adSpend = z(N);
   const infraPaidArr = z(N);
+  const feeDayArr = z(N); // platform fees taken this day (web + IAP)
   const drawArr = z(N);
   const deferred = z(N);
   const processorAR = z(N);
@@ -124,7 +129,7 @@ export function simulate(p: Params): SimResult {
   let d1m = -1;
 
   const limit = p.capital.creditLimit;
-  const budgets = [p.marketing.paidBudget, p.marketing.organicBudget];
+  const budgets = [p.marketing.paidDaily, p.marketing.organicDaily];
   const insolventFloor = -limit - 1e-6;
 
   for (let d = 0; d < N; d++) {
@@ -146,8 +151,11 @@ export function simulate(p: Params): SimResult {
 
     const nW = billW[d] * (1 - webFee) - p.routes.webFixed * txW[d];
     const nI = billI[d] * (1 - asFee);
-    feeW += billW[d] - Math.max(0, nW);
-    feeI += billI[d] - nI;
+    const feeWd = billW[d] - Math.max(0, nW);
+    const feeId = billI[d] - nI;
+    feeW += feeWd;
+    feeI += feeId;
+    feeDayArr[d] = feeWd + feeId;
     netBillCum += Math.max(0, nW) + nI;
     // Web: rolling, weekend-shifted. IAP: lumped onto its Apple fiscal payout day.
     const wIdx = webPayIdx[d];
@@ -183,10 +191,10 @@ export function simulate(p: Params): SimResult {
     const room = Math.max(0, bal + limit);
     const infraPaid = Math.min(infD, room);
     const spendRoom = room - infraPaid;
-    const dim = DAYS_IN_MONTH[mi];
+    // Budgets are daily rates; the ramp grows the daily rate each month.
     const rampF = Math.pow(1 + p.marketing.budgetRampPct / 100, mi);
-    const desired0 = dim > 0 ? (budgets[0] * rampF) / dim : 0;
-    const desired1 = dim > 0 ? (budgets[1] * rampF) / dim : 0;
+    const desired0 = budgets[0] * rampF;
+    const desired1 = budgets[1] * rampF;
     const desiredTotal = desired0 + desired1;
     const factor = desiredTotal > spendRoom && desiredTotal > 0 ? spendRoom / desiredTotal : 1;
     const sp = [desired0 * factor, desired1 * factor];
@@ -249,11 +257,8 @@ export function simulate(p: Params): SimResult {
   const equity = EV + endCash;
   const evMultiple = horizonARR > 0 ? EV / horizonARR : 0;
 
-  // ---- Cash-flow statement (daily + calendar-monthly rollup) ----
+  // ---- Cash-flow statement: build the daily rows, roll up the coarser grains ----
   const daily: CashFlowRow[] = [];
-  const monthly: CashFlowRow[] = [];
-  let curMonth: CashFlowRow | null = null;
-  let curKey = "";
   for (let d = 0; d <= lastDay; d++) {
     const date = DAYS[d].date;
     const wIn = inflowWeb[d];
@@ -273,38 +278,38 @@ export function simulate(p: Params): SimResult {
       netChange: wIn + iIn - sp - inf - dr,
       endBal: netArr[d],
     });
-    const key = `${date.getFullYear()}-${date.getMonth()}`;
-    if (key !== curKey) {
-      curMonth = {
-        i: d,
-        date: new Date(date.getFullYear(), date.getMonth(), 1),
-        label: date.toLocaleString("en-US", { month: "short", year: "2-digit" }),
-        webIn: 0,
-        iapIn: 0,
-        adSpend: 0,
-        infra: 0,
-        draw: 0,
-        netChange: 0,
-        endBal: 0,
-      };
-      monthly.push(curMonth);
-      curKey = key;
-    }
-    if (curMonth) {
-      curMonth.webIn += wIn;
-      curMonth.iapIn += iIn;
-      curMonth.adSpend += sp;
-      curMonth.infra += inf;
-      curMonth.draw += dr;
-      curMonth.endBal = netArr[d];
-    }
   }
-  for (const m of monthly) m.netChange = m.webIn + m.iapIn - m.adSpend - m.infra - m.draw;
+  const cashflow = {
+    daily,
+    weekly: rollupCashFlow(daily, "week"),
+    monthly: rollupCashFlow(daily, "month"),
+    annual: rollupCashFlow(daily, "year"),
+  };
+
+  // ---- Income statement + balance sheet (monthly, rolled to annual) ----
+  const ledger: DailyLedger = {
+    lastDay,
+    recRev,
+    adSpend,
+    infraPaid: infraPaidArr,
+    feeDay: feeDayArr,
+    draw: drawArr,
+    netArr,
+    processorAR,
+    deferred,
+    startCash: p.capital.startCash,
+    blendedFeeRate,
+    infraPct: infra,
+    taxRate: tax,
+  };
+  const income = buildIncomeStatement(ledger);
+  const balance = buildBalanceSheet(ledger, income);
 
   return {
     lastDay,
     series,
-    cashflow: { monthly, daily },
+    cashflow,
+    statements: { income, balance },
     sum: {
       d1m,
       d1mDate: d1m >= 0 ? DAYS[d1m].date : null,

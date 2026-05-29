@@ -200,13 +200,13 @@ const ACC: Acc[] = [
   ),
   num(
     "pb",
-    (p) => p.marketing.paidBudget,
-    (p, v) => void (p.marketing.paidBudget = v),
+    (p) => p.marketing.paidDaily,
+    (p, v) => void (p.marketing.paidDaily = v),
   ),
   num(
     "ob",
-    (p) => p.marketing.organicBudget,
-    (p, v) => void (p.marketing.organicBudget = v),
+    (p) => p.marketing.organicDaily,
+    (p, v) => void (p.marketing.organicDaily = v),
   ),
   num(
     "ramp",

@@ -67,8 +67,8 @@ export const DEFAULT_PARAMS: Params = {
     founderDraw: 0,
   },
   marketing: {
-    paidBudget: 4800,
-    organicBudget: 7200,
+    paidDaily: 160,
+    organicDaily: 240,
     budgetRampPct: 0,
   },
   unit: { infraPct: 10 },

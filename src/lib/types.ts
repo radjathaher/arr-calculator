@@ -74,9 +74,9 @@ export interface Capital {
 }
 
 export interface Marketing {
-  paidBudget: number; // paid-ads spend $/month (initial)
-  organicBudget: number; // organic/UGC spend $/month (initial)
-  budgetRampPct: number; // monthly growth applied to both channels
+  paidDaily: number; // paid-ads spend $/day (initial daily rate)
+  organicDaily: number; // organic/UGC spend $/day (initial daily rate)
+  budgetRampPct: number; // monthly growth applied to both channels' daily rate
 }
 
 export interface UnitEcon {
@@ -126,8 +126,53 @@ export interface CashFlowRow {
 }
 
 export interface CashFlow {
-  monthly: CashFlowRow[];
   daily: CashFlowRow[];
+  weekly: CashFlowRow[];
+  monthly: CashFlowRow[];
+  annual: CashFlowRow[];
+}
+
+// One row of the accrual income statement (P&L). Expenses are positive numbers.
+export interface IncomeRow {
+  i: number; // first day index of the period
+  date: Date;
+  label: string; // "Jun 26" (month) or "2026" (year)
+  revenue: number; // recognised subscription revenue (gross)
+  platformFees: number; // Apple/web cut, recognised with revenue
+  infra: number; // infra/COGS recognised with revenue
+  grossProfit: number; // revenue − platformFees − infra (= revenue · gm)
+  marketing: number; // ad spend (expensed as incurred)
+  ebit: number; // grossProfit − marketing
+  tax: number; // taxRate · max(0, ebit)
+  netIncome: number; // ebit − tax
+}
+
+// One point-in-time row of the balance sheet. Ties: totalAssets ≈ totalLiabilities + totalEquity.
+export interface BalanceRow {
+  i: number;
+  date: Date;
+  label: string;
+  cash: number; // max(0, net balance)
+  receivable: number; // cash in transit (billed-net, not yet collected)
+  totalAssets: number;
+  deferredRevenue: number; // billed but not yet recognised
+  creditDrawn: number; // max(0, −net balance)
+  accruedCosts: number; // fee-timing + infra payable + tax payable (sign-aware)
+  totalLiabilities: number;
+  paidInCapital: number; // starting cash
+  retainedEarnings: number; // Σ net income − Σ founder draws
+  totalEquity: number;
+  check: number; // totalAssets − totalLiabilities − totalEquity (≈ 0)
+}
+
+export interface IncomeStatement {
+  monthly: IncomeRow[];
+  annual: IncomeRow[];
+}
+
+export interface BalanceSheet {
+  monthly: BalanceRow[];
+  annual: BalanceRow[];
 }
 
 export interface SimSummary {
@@ -153,4 +198,8 @@ export interface SimResult {
   series: SeriesPoint[];
   sum: SimSummary;
   cashflow: CashFlow;
+  statements: {
+    income: IncomeStatement;
+    balance: BalanceSheet;
+  };
 }

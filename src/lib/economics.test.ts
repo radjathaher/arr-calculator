@@ -54,7 +54,7 @@ describe("blendedEconomics", () => {
 
   it("collapses to a single channel when the other has no budget", () => {
     const p = structuredClone(DEFAULT_PARAMS);
-    p.marketing.organicBudget = 0;
+    p.marketing.organicDaily = 0;
     expect(blendedEconomics(p).cac).toBeCloseTo(econ(0).cac, 6);
   });
 });

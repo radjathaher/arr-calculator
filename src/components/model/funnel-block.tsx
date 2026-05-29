@@ -27,11 +27,11 @@ export function FunnelBlock({
   const C = (n: number) => money(n, cur, fx);
   const cf = (mut: (c: Channel) => void) => upd((q) => mut(q.channels[idx]));
 
-  const spend = idx === 0 ? params.marketing.paidBudget : params.marketing.organicBudget;
+  const spend = idx === 0 ? params.marketing.paidDaily : params.marketing.organicDaily;
   const setSpend = (v: number) =>
     upd((q) => {
-      if (idx === 0) q.marketing.paidBudget = v;
-      else q.marketing.organicBudget = v;
+      if (idx === 0) q.marketing.paidDaily = v;
+      else q.marketing.organicDaily = v;
     });
   const fee = isWeb ? params.routes.webFeePct : params.routes.appFeeLow;
   const setFee = (v: number) =>
@@ -66,7 +66,7 @@ export function FunnelBlock({
       </div>
 
       <div className="ni-row">
-        <NI label="spend $/mo" value={spend} width={84} onChange={setSpend} />
+        <NI label="spend $/day" value={spend} width={84} onChange={setSpend} />
       </div>
 
       <div className="subhead">funnel — rate │ cost per step</div>
@@ -91,7 +91,7 @@ export function FunnelBlock({
         <div className="fc-row">
           <span className="fc-rate">
             <NI
-              label="imp→install %"
+              label="impression-to-install %"
               value={ch.funnel.impToInstall}
               width={52}
               suffix="%"
@@ -107,7 +107,7 @@ export function FunnelBlock({
         <div className="fc-row">
           <span className="fc-rate">
             <NI
-              label="install→trial %"
+              label="install-to-trial %"
               value={ch.funnel.installToTrial}
               width={52}
               suffix="%"
@@ -116,14 +116,14 @@ export function FunnelBlock({
           </span>
           <span className="fc-arrow">►</span>
           <span className="fc-cost">
-            <span className="fc-cost-l">cost/trial</span>
+            <span className="fc-cost-l">cost-per-trial</span>
             <b>{C(e.costPerTrial)}</b>
           </span>
         </div>
         <div className="fc-row">
           <span className="fc-rate">
             <NI
-              label="trial→paid %"
+              label="trial-to-paid %"
               value={ch.funnel.trialToPaid}
               width={52}
               suffix="%"
@@ -142,7 +142,7 @@ export function FunnelBlock({
       <PlanGrid params={params} idx={idx} upd={upd} cur={cur} fx={fx} />
 
       <div className="fb-score">
-        CAC <b>{C(e.cac)}</b> · LTV <b>{C(e.blendedLtv)}</b> · LTV:CAC{" "}
+        CAC <b>{C(e.cac)}</b> · blended LTV <b>{C(e.blendedLtv)}</b> · LTV:CAC{" "}
         <b>{e.ltvCac.toFixed(1)}×</b> · payback <b>{e.paybackWeeks.toFixed(0)} wk</b>
       </div>
 

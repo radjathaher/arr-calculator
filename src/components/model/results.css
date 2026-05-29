@@ -125,3 +125,60 @@
   font-family: "IBM Plex Mono";
   padding: 6px 2px;
 }
+
+/* ---- Three financial statements ---- */
+
+/* Per-section grain toggle, a compact .seg sitting above each table. */
+.st-grain {
+  width: max-content;
+  margin: 0 0 9px;
+}
+.st-grain button {
+  padding: 4px 11px;
+  text-transform: capitalize;
+}
+
+/* Net/balance figures get a touch more weight than the supporting columns. */
+.cf-table td.num.strong {
+  font-weight: 600;
+}
+
+/* ---- Transposed balance sheet ---- */
+/* Line items label the left column; each period is its own column. */
+.bs-table td.col-month,
+.bs-table th.col-month {
+  font-weight: 500;
+}
+
+/* Section headers (Assets / Liabilities / Equity) span the full width. */
+.bs-group td {
+  padding-top: 9px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Subtotal rows (total assets / liabilities / equity) read bolder. */
+.bs-total td {
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 1.5px solid var(--line);
+}
+
+/* The tie row proves Assets = Liabilities + Equity. Green when it ties,
+   danger when it does not, so a broken model is obvious at a glance. */
+.bs-tie td {
+  font-weight: 600;
+  border-top: 1.5px solid var(--line);
+  border-bottom: none;
+}
+.bs-tie td.col-month {
+  color: var(--muted);
+  font-style: italic;
+}
+.cf-table td.num.tie-ok {
+  color: var(--green);
+}

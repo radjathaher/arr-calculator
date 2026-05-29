@@ -14,8 +14,8 @@ export interface BlendedEcon {
 export function blendedEconomics(p: Params): BlendedEcon {
   const e0 = channelEconomics(p.channels[0], p.routes, p.unit.infraPct);
   const e1 = channelEconomics(p.channels[1], p.routes, p.unit.infraPct);
-  const sp0 = Math.max(0, p.marketing.paidBudget) || 0;
-  const sp1 = Math.max(0, p.marketing.organicBudget) || 0;
+  const sp0 = Math.max(0, p.marketing.paidDaily) || 0;
+  const sp1 = Math.max(0, p.marketing.organicDaily) || 0;
   const c0 = e0.cac > 0 ? sp0 / e0.cac : 0; // customers from each channel
   const c1 = e1.cac > 0 ? sp1 / e1.cac : 0;
   const cust = c0 + c1;
