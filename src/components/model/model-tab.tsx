@@ -20,9 +20,9 @@ const initial: Params =
 
 export function ModelTab() {
   const [params, setParams] = useState<Params>(initial);
-  // The committed snapshot drives the simulation. Live edits to `params` only
-  // flow into `committed` when the user clicks Recalculate, so the model never
-  // recomputes mid-keystroke.
+  // The committed snapshot drives the simulation; live edits flow into it on a
+  // short debounce so the model recalculates shortly after you stop typing (and
+  // on blur) without ever showing stale numbers or recomputing mid-keystroke.
   const [committed, setCommitted] = useState<Params>(initial);
   const [cur, setCur] = useState<Currency>("USD");
 
@@ -35,9 +35,10 @@ export function ModelTab() {
 
   const sim = useMemo(() => (hasBlankInputs(committed) ? null : simulate(committed)), [committed]);
 
-  // Edits diverge from the committed snapshot until the next recalc.
-  const stale = JSON.stringify(params) !== JSON.stringify(committed);
-  const blank = hasBlankInputs(params);
+  useEffect(() => {
+    const t = setTimeout(() => setCommitted(params), 350);
+    return () => clearTimeout(t);
+  }, [params]);
 
   useEffect(() => {
     const qs = encodeParams(params);
@@ -51,18 +52,6 @@ export function ModelTab() {
       <div className="topbar">
         <div className="lblmono">Compare the two funnels — watch when you hit your ARR goal</div>
         <div className="topbar-actions">
-          {(stale || blank) && (
-            <span className="recalc-stale">
-              {blank ? "fill every field" : "inputs changed — recalculate"}
-            </span>
-          )}
-          <button
-            className="recalc"
-            disabled={!stale || blank}
-            onClick={() => setCommitted(structuredClone(params))}
-          >
-            ⟳ Recalculate
-          </button>
           <div className="seg">
             {(["USD", "IDR"] as Currency[]).map((c) => (
               <button key={c} className={cur === c ? "on" : ""} onClick={() => setCur(c)}>

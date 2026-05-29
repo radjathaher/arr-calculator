@@ -20,17 +20,27 @@ export const T = {
 // Funnel conversions are percentages. Defaults seeded from public benchmarks
 // (RevenueCat / Adapty 2026, and the Sideshift UGC case study).
 
+// Benchmark retention used as the default for both channels (1st · 2nd · mature
+// renewal, per plan). Founders tune these per channel from here.
+const RETENTION = {
+  weekly: { r1: 54.2, r2: 74.6, rMature: 81.2 },
+  monthly: { r1: 57.3, r2: 72.2, rMature: 77.5 },
+  annual: { r1: 24.6, r2: 47.4, rMature: 60.3 },
+} as const;
+
+const MIX = { weekly: 70, monthly: 0, annual: 30 } as const;
+
 const PAID: Channel = {
   name: "Paid ads",
   route: "WEB",
   funnel: { cpm: 20, impToInstall: 0.8, installToTrial: 13.3, trialToPaid: 30 },
-  mix: { weekly: 55, monthly: 0, annual: 45 },
+  mix: { ...MIX },
   prices: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99 },
   trials: { weekly: 3, monthly: 0, annual: 0 },
   retention: {
-    weekly: { r1: 55, r2: 78, rMature: 87 },
-    monthly: { r1: 70, r2: 82, rMature: 90 },
-    annual: { r1: 45, r2: 70, rMature: 85 },
+    weekly: { ...RETENTION.weekly },
+    monthly: { ...RETENTION.monthly },
+    annual: { ...RETENTION.annual },
   },
   color: T.teal,
 };
@@ -39,13 +49,13 @@ const ORGANIC: Channel = {
   name: "Organic / UGC",
   route: "APP",
   funnel: { cpm: 0.56, impToInstall: 0.27, installToTrial: 10.9, trialToPaid: 25.6 },
-  mix: { weekly: 80, monthly: 0, annual: 20 },
+  mix: { ...MIX },
   prices: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99 },
   trials: { weekly: 3, monthly: 0, annual: 0 },
   retention: {
-    weekly: { r1: 45, r2: 72, rMature: 84 },
-    monthly: { r1: 60, r2: 76, rMature: 86 },
-    annual: { r1: 25, r2: 60, rMature: 80 },
+    weekly: { ...RETENTION.weekly },
+    monthly: { ...RETENTION.monthly },
+    annual: { ...RETENTION.annual },
   },
   color: T.green,
 };
