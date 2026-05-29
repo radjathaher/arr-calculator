@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DAYS_IN_MONTH, MAXDAYS, NDAYS, simulate, tickRet, weeklyLifetime } from "./engine";
-import { baseCAC } from "./saturation";
+import { baseCAC, DAYS_IN_MONTH, MAXDAYS, NDAYS, simulate, tickRet, weeklyLifetime } from "./model";
 import { DEFAULT_PARAMS } from "./defaults";
 import type { Params } from "./types";
 

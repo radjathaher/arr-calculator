@@ -1,7 +1,7 @@
 import type { Channel, Params, RouteKind } from "../../lib/types";
 import type { Currency } from "../../lib/format";
 import { money } from "../../lib/format";
-import { channelEconomics } from "../../lib/economics";
+import { channelEconomics } from "../../lib/model";
 import { NI } from "../atoms";
 import { PlanGrid } from "./plan-grid";
 

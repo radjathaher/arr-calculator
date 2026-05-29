@@ -12,7 +12,7 @@ import {
 import type { SimResult } from "../../lib/types";
 import type { Currency } from "../../lib/format";
 import { dstr, money } from "../../lib/format";
-import { DAYS, NDAYS } from "../../lib/engine";
+import { DAYS, NDAYS } from "../../lib/model";
 
 // Round a value up to a clean axis bound: 1, 2, 2.5, or 5 times a power of ten.
 function niceCeil(v: number): number {

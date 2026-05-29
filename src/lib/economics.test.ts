@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blendedEconomics, channelEconomics } from "./economics";
+import { blendedEconomics, channelEconomics } from "./model";
 import { DEFAULT_PARAMS } from "./defaults";
 
 const econ = (i: 0 | 1) =>

@@ -1,7 +1,7 @@
 import type { Channel, Params } from "../../lib/types";
 import type { Currency } from "../../lib/format";
 import { money } from "../../lib/format";
-import { channelEconomics } from "../../lib/economics";
+import { channelEconomics } from "../../lib/model";
 import { NI } from "../atoms";
 
 // Transposed plan matrix for one channel: columns are weekly · monthly · annual,

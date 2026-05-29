@@ -1,112 +1,14 @@
-import type { CashFlowRow, Channel, Params, SeriesPoint, SimResult, StepDown } from "./types";
-import { baseCAC } from "./saturation";
-import { dstr } from "./format";
+import type { CashFlowRow, Channel, Params, SeriesPoint, SimResult } from "../types";
+import { dstr } from "../format";
+import { DAYS, DAYS_IN_MONTH, NDAYS } from "./calendar";
+import { baseCAC } from "./acquisition/baseCac";
+import { tickRet } from "./retention/tickRet";
+import { buildWebPayMap } from "./payout/webPayout";
+import { buildIapPayMap } from "./payout/iapPayout";
+import { wacc } from "./valuation/wacc";
 
-// ---- Calendar -------------------------------------------------------------
-// Day 0 = 1 June 2026 (launch). The model runs until the ARR target is hit,
-// with a 5-year safety cap.
-export const START = new Date(2026, 5, 1);
-export const MAXDAYS = 1826; // 5-year cap
 const BUF = 400; // slack for forward-scheduled billings / payout lags
-
-interface DayInfo {
-  date: Date;
-  mi: number; // month index since start (0 = Jun 2026)
-  first: boolean;
-}
-
-export const DAYS: DayInfo[] = (() => {
-  const out: DayInfo[] = [];
-  for (let i = 0; i < MAXDAYS; i++) {
-    const d = new Date(START.getTime() + i * 864e5);
-    out.push({
-      date: d,
-      mi: (d.getFullYear() - 2026) * 12 + d.getMonth() - 5,
-      first: d.getDate() === 1,
-    });
-  }
-  return out;
-})();
-
-export const NDAYS = DAYS.length;
-const NMONTHS = DAYS[NDAYS - 1].mi + 1;
-
-// Days per calendar month within the horizon (used by the budget ramp).
-export const DAYS_IN_MONTH: number[] = (() => {
-  const out = Array.from({ length: NMONTHS }, () => 0);
-  for (const d of DAYS) out[d.mi]++;
-  return out;
-})();
-
-// Cumulative survival at tick k for a 3-point curve (percentages in): 1st
-// renewal, 2nd renewal, then a flat mature rate from the 3rd renewal onward.
-export function tickRet(sd: StepDown, k: number): number {
-  if (k <= 0) return 1;
-  let f = sd.r1 / 100;
-  if (k === 1) return f;
-  f *= sd.r2 / 100;
-  if (k === 2) return f;
-  return f * Math.pow(sd.rMature / 100, k - 2);
-}
-
-// Total "billing ticks" a cohort pays over its life (lifetime in weeks/months).
-export function weeklyLifetime(sd: StepDown, cap = 520): number {
-  let sum = 0;
-  for (let k = 0; k < cap; k++) {
-    const r = tickRet(sd, k);
-    if (r < 1e-6) break;
-    sum += r;
-  }
-  return sum;
-}
-
 const z = (n: number): Float64Array => new Float64Array(n);
-const DAYMS = 864e5;
-
-// Web checkout pays on a rolling basis: each day's net lands `lag` days later,
-// but a payout that would fall on a weekend rolls to the following Monday (banks
-// don't settle Sat/Sun). Returns, for every earning day, the index it's collected.
-function buildWebPayMap(len: number, lag: number): Int32Array {
-  const map = new Int32Array(len);
-  const l = Math.round(lag);
-  for (let d = 0; d < len; d++) {
-    let t = d + l;
-    const wd = new Date(START.getTime() + t * DAYMS).getDay(); // 0=Sun … 6=Sat
-    if (wd === 6) t += 2;
-    else if (wd === 0) t += 1;
-    map[d] = t;
-  }
-  return map;
-}
-
-// Apple pays the App Store / IAP balance as one monthly LUMP, not a daily
-// trickle: earnings accrue across a whole Apple fiscal month and are paid
-// `lagAfterClose` days after that month closes (Apple's legal max is "within 45
-// days of the fiscal month end"; ~33 days is the observed norm). Apple's fiscal
-// calendar: the year starts the last Sunday of September, every fiscal month
-// ends on a Saturday, and quarters follow a 5-4-4 week pattern (anchor verified
-// against Apple's published 2026 dates: FY2026 began Sun 28 Sep 2025). The rare
-// 53-week fiscal year is not modelled — it drifts late-horizon dates by ≤1 week.
-// Returns, for every earning day, the index its lump is collected (−1 if outside
-// any generated fiscal month).
-function buildIapPayMap(len: number, lagAfterClose: number): Int32Array {
-  const map = new Int32Array(len).fill(-1);
-  const weeks = [5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4]; // weeks per fiscal month
-  const lag = Math.round(lagAfterClose);
-  let cursor = new Date(2025, 8, 28).getTime(); // last Sunday of Sep 2025 = FY26 anchor
-  for (let m = 0; m < 12 * 9; m++) {
-    const w = weeks[m % 12];
-    const startIdx = Math.round((cursor - START.getTime()) / DAYMS);
-    const closeIdx = startIdx + w * 7 - 1; // Saturday close
-    const payIdx = closeIdx + lag;
-    const lo = Math.max(0, startIdx);
-    const hi = Math.min(len - 1, closeIdx);
-    for (let d = lo; d <= hi; d++) map[d] = payIdx;
-    cursor += w * 7 * DAYMS;
-    if (startIdx > len) break;
-  }
-  return map;
-}
 
 // ---- Core simulation ------------------------------------------------------
 export function simulate(p: Params): SimResult {
@@ -323,7 +225,7 @@ export function simulate(p: Params): SimResult {
   for (let d = 0; d <= lastDay; d++) series.push({ i: d, net: netArr[d], arr: arr[d] });
 
   // ---- DCF / enterprise value ----
-  const wacc = (p.valuation.rfRate + p.valuation.beta * p.valuation.erp) / 100;
+  const waccVal = wacc(p.valuation);
   const gTerm = p.valuation.termGrowth / 100;
   const tax = p.valuation.taxRate / 100;
   let pv = 0;
@@ -336,12 +238,12 @@ export function simulate(p: Params): SimResult {
     const dDef = deferred[d] - prevDef;
     prevRecv = processorAR[d];
     prevDef = deferred[d];
-    pv += (nopat - dRecv + dDef) / Math.pow(1 + wacc, d / 365);
+    pv += (nopat - dRecv + dDef) / Math.pow(1 + waccVal, d / 365);
   }
   const horizonARR = d1m >= 0 ? arr[d1m] : maxARR;
   const termFCF = horizonARR * gm * (1 - tax);
-  const tv = wacc > gTerm ? (termFCF * (1 + gTerm)) / (wacc - gTerm) : termFCF * 40;
-  const pvTV = tv / Math.pow(1 + wacc, lastDay / 365);
+  const tv = waccVal > gTerm ? (termFCF * (1 + gTerm)) / (waccVal - gTerm) : termFCF * 40;
+  const pvTV = tv / Math.pow(1 + waccVal, lastDay / 365);
   const EV = pv + pvTV;
   const endCash = netArr[lastDay];
   const equity = EV + endCash;
@@ -418,7 +320,7 @@ export function simulate(p: Params): SimResult {
       EV,
       equity,
       evMultiple,
-      wacc: wacc * 100,
+      wacc: waccVal * 100,
     },
   };
 }

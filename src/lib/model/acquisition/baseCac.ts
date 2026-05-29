@@ -1,4 +1,4 @@
-import type { Channel } from "./types";
+import type { Channel } from "../../types";
 
 // Base customer-acquisition cost implied by a channel's funnel. Funnel
 // conversions are stored as percentages (e.g. 0.8 means 0.8%):

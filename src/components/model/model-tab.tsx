@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Params } from "../../lib/types";
 import type { Currency } from "../../lib/format";
-import { simulate } from "../../lib/engine";
+import { simulate } from "../../lib/model";
 import { DEFAULT_PARAMS } from "../../lib/defaults";
 import { decodeParams, encodeParams, hasBlankInputs } from "../../lib/urlState";
 import { NI, Sec } from "../atoms";

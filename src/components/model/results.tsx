@@ -1,7 +1,7 @@
 import type { Params, SimResult } from "../../lib/types";
 import type { Currency } from "../../lib/format";
 import { dstr, money } from "../../lib/format";
-import { blendedEconomics } from "../../lib/economics";
+import { blendedEconomics } from "../../lib/model";
 import { T } from "../../lib/defaults";
 
 // The answer, on top: four metric cards that fold the verdict in directly.
