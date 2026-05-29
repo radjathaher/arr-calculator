@@ -197,19 +197,28 @@ export function simulate(p: Params): SimResult {
     collCum += inflow[d];
     processorAR[d] = Math.max(0, netBillCum - collCum);
 
-    // Founder distribution on the first of each month (the only thing that can
-    // push the balance below −creditLimit).
+    // Founder distribution on the first of each month — the only obligation that
+    // can pull the balance below −creditLimit (true insolvency). Spending on ads
+    // or infra never can, so we record the low-water mark and insolvency here, at
+    // the one point in the day where the balance is allowed to dip past the floor.
     if (DAYS[d].first && p.capital.founderDraw > 0) bal -= p.capital.founderDraw;
+    if (bal < minBal) minBal = bal;
+    if (bal < insolventFloor && insolventDay < 0) insolventDay = d;
 
-    // Marketing spend: deploy each channel's budget×ramp, but only what working
-    // capital can fund (net balance + remaining credit, after infra).
+    // Operations — marketing spend and infra ride the credit line but can never
+    // breach it: both are funded only out of the remaining credit headroom. Infra
+    // is paid first (non-discretionary), then ad spend takes what's left; any infra
+    // that can't be covered while pinned at the limit is deferred rather than
+    // pushing the balance below the floor and faking insolvency.
+    const room = Math.max(0, bal + limit);
+    const infraPaid = Math.min(infD, room);
+    const spendRoom = room - infraPaid;
     const dim = DAYS_IN_MONTH[mi];
     const rampF = Math.pow(1 + p.marketing.budgetRampPct / 100, mi);
     const desired0 = dim > 0 ? (budgets[0] * rampF) / dim : 0;
     const desired1 = dim > 0 ? (budgets[1] * rampF) / dim : 0;
     const desiredTotal = desired0 + desired1;
-    const available = Math.max(0, bal + limit - infD);
-    const factor = desiredTotal > available && desiredTotal > 0 ? available / desiredTotal : 1;
+    const factor = desiredTotal > spendRoom && desiredTotal > 0 ? spendRoom / desiredTotal : 1;
     const sp = [desired0 * factor, desired1 * factor];
     let total = 0;
     for (let c = 0; c < 2; c++) {
@@ -219,11 +228,9 @@ export function simulate(p: Params): SimResult {
       }
     }
     adSpend[d] = total;
-    bal -= total + infD;
+    bal -= total + infraPaid;
 
     netArr[d] = bal;
-    if (bal < minBal) minBal = bal;
-    if (bal < insolventFloor && insolventDay < 0) insolventDay = d;
     if (arrD >= p.arrGoal) {
       d1m = d;
       break; // reached the target — stop the clock here

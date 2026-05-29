@@ -62,14 +62,18 @@ describe("simulate — run to target", () => {
 });
 
 describe("simulate — net cash & credit", () => {
-  it("caps spend at fundable capital — bounded near the credit line, no blow-up", () => {
+  it("operations never breach the credit floor — no draw, no insolvency", () => {
     const p = clone();
     p.marketing.paidBudget = 1e9;
     p.marketing.organicBudget = 1e9;
+    p.capital.founderDraw = 0;
     const r = simulate(p);
     expect(Number.isFinite(r.sum.endARR)).toBe(true);
-    // bounded near the credit line, not quadrillions in the hole (the old bug)
-    expect(r.sum.minCash).toBeGreaterThan(-1e6);
+    // ad spend + infra ride the credit line but can never sink below it, so an
+    // all-operations run is bounded at exactly −creditLimit and never insolvent.
+    expect(r.sum.minCash).toBeGreaterThanOrEqual(-p.capital.creditLimit - 1e-6);
+    expect(r.sum.insolventDay).toBe(-1);
+    expect(r.sum.peakFunding).toBe(0);
   });
 
   it("a founder draw can push below −creditLimit → insolvent", () => {
