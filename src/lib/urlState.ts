@@ -2,8 +2,7 @@ import type { Params, RouteKind } from "./types";
 import { DEFAULT_PARAMS } from "./defaults";
 
 // Flat, URL-friendly codec for Params so scenarios round-trip through the
-// querystring (shareable links). Only values that differ from the defaults are
-// written, keeping URLs short.
+// querystring. Only values that differ from the defaults are written.
 
 interface NumAcc {
   k: string;
@@ -66,6 +65,21 @@ function channelAccessors(i: 0 | 1): Acc[] {
       (p, v) => void (c(p).mix.annual = v),
     ),
     num(
+      `${x}pw`,
+      (p) => c(p).prices.wPrice,
+      (p, v) => void (c(p).prices.wPrice = v),
+    ),
+    num(
+      `${x}pm`,
+      (p) => c(p).prices.mPrice,
+      (p, v) => void (c(p).prices.mPrice = v),
+    ),
+    num(
+      `${x}pa`,
+      (p) => c(p).prices.aPrice,
+      (p, v) => void (c(p).prices.aPrice = v),
+    ),
+    num(
       `${x}w1`,
       (p) => c(p).retention.weekly.r1,
       (p, v) => void (c(p).retention.weekly.r1 = v),
@@ -74,11 +88,6 @@ function channelAccessors(i: 0 | 1): Acc[] {
       `${x}w2`,
       (p) => c(p).retention.weekly.r2,
       (p, v) => void (c(p).retention.weekly.r2 = v),
-    ),
-    num(
-      `${x}w3`,
-      (p) => c(p).retention.weekly.r3,
-      (p, v) => void (c(p).retention.weekly.r3 = v),
     ),
     num(
       `${x}wm`,
@@ -96,11 +105,6 @@ function channelAccessors(i: 0 | 1): Acc[] {
       (p, v) => void (c(p).retention.monthly.r2 = v),
     ),
     num(
-      `${x}o3`,
-      (p) => c(p).retention.monthly.r3,
-      (p, v) => void (c(p).retention.monthly.r3 = v),
-    ),
-    num(
       `${x}om`,
       (p) => c(p).retention.monthly.rMature,
       (p, v) => void (c(p).retention.monthly.rMature = v),
@@ -109,16 +113,6 @@ function channelAccessors(i: 0 | 1): Acc[] {
       `${x}ar`,
       (p) => c(p).retention.annualRenewal,
       (p, v) => void (c(p).retention.annualRenewal = v),
-    ),
-    num(
-      `${x}sat`,
-      (p) => c(p).satPoint,
-      (p, v) => void (c(p).satPoint = v),
-    ),
-    num(
-      `${x}slp`,
-      (p) => c(p).satSlope,
-      (p, v) => void (c(p).satSlope = v),
     ),
   ];
 }
@@ -133,21 +127,6 @@ const ACC: Acc[] = [
     "goal",
     (p) => p.arrGoal,
     (p, v) => void (p.arrGoal = v),
-  ),
-  num(
-    "pw",
-    (p) => p.plans.wPrice,
-    (p, v) => void (p.plans.wPrice = v),
-  ),
-  num(
-    "pm",
-    (p) => p.plans.mPrice,
-    (p, v) => void (p.plans.mPrice = v),
-  ),
-  num(
-    "pa",
-    (p) => p.plans.aPrice,
-    (p, v) => void (p.plans.aPrice = v),
   ),
   num(
     "trial",
@@ -193,16 +172,6 @@ const ACC: Acc[] = [
     "credit",
     (p) => p.capital.creditLimit,
     (p, v) => void (p.capital.creditLimit = v),
-  ),
-  num(
-    "ap",
-    (p) => p.capital.apDays,
-    (p, v) => void (p.capital.apDays = v),
-  ),
-  num(
-    "res",
-    (p) => p.capital.reserve,
-    (p, v) => void (p.capital.reserve = v),
   ),
   num(
     "draw",
@@ -288,8 +257,8 @@ export function decodeParams(qs: string): Params {
   return p;
 }
 
-// True if any numeric input is blank (NaN). The model pauses (shows "—") rather
-// than computing on incomplete inputs.
+// True if any numeric input is blank (NaN); the model pauses rather than
+// computing on incomplete inputs.
 export function hasBlankInputs(p: Params): boolean {
   return ACC.some((a) => a.kind === "num" && Number.isNaN(a.get(p)));
 }

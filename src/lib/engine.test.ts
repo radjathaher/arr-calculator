@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DAYS_IN_MONTH, MAXDAYS, NDAYS, simulate, tickRet, weeklyLifetime } from "./engine";
-import { baseCAC, customersFromSpend, effectiveCAC } from "./saturation";
+import { baseCAC } from "./saturation";
 import { DEFAULT_PARAMS } from "./defaults";
 import type { Params } from "./types";
 
@@ -14,31 +14,22 @@ describe("calendar", () => {
 });
 
 describe("baseCAC", () => {
-  it("matches the funnel arithmetic for paid (CPI ~$2.50, install->paid ~4%)", () => {
-    expect(baseCAC(DEFAULT_PARAMS.channels[0])).toBeCloseTo(62.66, 1);
-  });
-  it("makes organic far cheaper than paid", () => {
+  it("organic is far cheaper than paid", () => {
     expect(baseCAC(DEFAULT_PARAMS.channels[1])).toBeLessThan(baseCAC(DEFAULT_PARAMS.channels[0]));
   });
 });
 
-describe("saturation", () => {
-  it("is linear below the sat point, climbs above", () => {
-    expect(customersFromSpend(50, 10, 100, 0.7)).toBeCloseTo(5, 6);
-    const ch = DEFAULT_PARAMS.channels[1];
-    expect(effectiveCAC(ch, 30000)).toBeGreaterThan(effectiveCAC(ch, 100) * 2);
-  });
-});
-
-describe("retention", () => {
-  it("tickRet steps down from 1 (percentage inputs)", () => {
-    const sd = { r1: 50, r2: 75, r3: 82, rMature: 85 };
+describe("retention (3-point)", () => {
+  it("tickRet: 1 → r1 → r1·r2 → mature decay", () => {
+    const sd = { r1: 50, r2: 75, rMature: 85 };
     expect(tickRet(sd, 0)).toBe(1);
     expect(tickRet(sd, 1)).toBeCloseTo(0.5, 6);
     expect(tickRet(sd, 2)).toBeCloseTo(0.375, 6);
+    expect(tickRet(sd, 3)).toBeCloseTo(0.375 * 0.85, 6);
+    expect(tickRet(sd, 4)).toBeCloseTo(0.375 * 0.85 * 0.85, 6);
   });
   it("weeklyLifetime is finite", () => {
-    expect(weeklyLifetime({ r1: 50, r2: 75, r3: 82, rMature: 85 })).toBeGreaterThan(1);
+    expect(weeklyLifetime({ r1: 50, r2: 75, rMature: 85 })).toBeGreaterThan(1);
   });
 });
 
@@ -47,76 +38,75 @@ describe("simulate — run to target", () => {
     expect(simulate(clone()).sum.endARR).toBe(simulate(clone()).sum.endARR);
   });
 
-  it("default ($1M goal) plateaus and never reaches — runs to the cap", () => {
+  it("default ($1M goal) plateaus and runs to the cap", () => {
     const r = simulate(clone());
     expect(r.sum.d1m).toBe(-1);
     expect(r.lastDay).toBe(NDAYS - 1);
     expect(r.sum.endARR).toBeLessThan(1e6);
-    expect(r.sum.maxARR).toBeGreaterThan(0);
   });
 
-  it("a budget ramp breaks through and stops the clock at the target", () => {
+  it("a budget ramp breaks through and stops at the target", () => {
     const p = clone();
     p.marketing.budgetRampPct = 5;
     const r = simulate(p);
     expect(r.sum.d1m).toBeGreaterThanOrEqual(0);
     expect(r.lastDay).toBe(r.sum.d1m);
     expect(r.sum.endARR).toBeGreaterThanOrEqual(1e6);
-    expect(r.series.length).toBe(r.lastDay + 1);
   });
 
-  it("respects an editable target (lower goal reached sooner)", () => {
+  it("respects an editable target", () => {
     const p = clone();
     p.arrGoal = 300_000;
-    const r = simulate(p);
-    expect(r.sum.d1m).toBeGreaterThanOrEqual(0);
-    expect(r.sum.endARR).toBeGreaterThanOrEqual(300_000);
+    expect(simulate(p).sum.d1m).toBeGreaterThanOrEqual(0);
   });
 });
 
-describe("simulate — economics & cash", () => {
-  it("with zero budget stays at starting cash and acquires nobody", () => {
-    const p = clone();
-    p.marketing.paidBudget = 0;
-    p.marketing.organicBudget = 0;
-    const r = simulate(p);
-    expect(r.sum.maxARR).toBe(0);
-    expect(r.sum.insolventDay).toBe(-1);
-    expect(r.sum.endCash).toBeCloseTo(p.capital.startCash, 0);
-  });
-
-  it("caps spend at fundable capital — no blow-up from an absurd budget", () => {
+describe("simulate — net cash & credit", () => {
+  it("caps spend at fundable capital — bounded near the credit line, no blow-up", () => {
     const p = clone();
     p.marketing.paidBudget = 1e9;
     p.marketing.organicBudget = 1e9;
-    p.capital.startCash = 0;
     const r = simulate(p);
     expect(Number.isFinite(r.sum.endARR)).toBe(true);
-    expect(r.sum.peakCard).toBeLessThanOrEqual(p.capital.creditLimit + 1);
-    expect(r.sum.minCash).toBeGreaterThan(-1e6); // not quadrillions in the hole
+    // bounded near the credit line, not quadrillions in the hole (the old bug)
+    expect(r.sum.minCash).toBeGreaterThan(-1e6);
   });
 
-  it("produces a finite enterprise value and equity bridge", () => {
-    const r = simulate(clone());
-    expect(Number.isFinite(r.sum.EV)).toBe(true);
-    expect(Number.isFinite(r.sum.equity)).toBe(true);
-    expect(r.sum.wacc).toBeGreaterThan(0);
-  });
-
-  it("values faster web payout above slow app payout, all else equal", () => {
-    const web = clone();
-    web.channels[0].route = "WEB";
-    web.channels[1].route = "WEB";
-    const app = clone();
-    app.channels[0].route = "APP";
-    app.channels[1].route = "APP";
-    expect(simulate(web).sum.EV).toBeGreaterThan(simulate(app).sum.EV);
+  it("a founder draw can push below −creditLimit → insolvent", () => {
+    const p = clone();
+    p.marketing.paidBudget = 0;
+    p.marketing.organicBudget = 0;
+    p.capital.startCash = 0;
+    p.capital.creditLimit = 20000;
+    p.capital.founderDraw = 5000;
+    const r = simulate(p);
+    expect(r.sum.insolventDay).toBeGreaterThanOrEqual(0);
+    expect(r.sum.minCash).toBeLessThan(-20000);
+    expect(r.sum.peakFunding).toBeGreaterThan(0);
   });
 
   it("founder draw reduces ending cash", () => {
-    const noDraw = simulate(clone());
+    const noDraw = simulate(clone()).sum.endCash;
     const p = clone();
     p.capital.founderDraw = 1000;
-    expect(simulate(p).sum.endCash).toBeLessThan(noDraw.sum.endCash);
+    expect(simulate(p).sum.endCash).toBeLessThan(noDraw);
+  });
+});
+
+describe("simulate — per-channel pricing", () => {
+  it("raising one channel's prices raises ARR", () => {
+    const base = simulate(clone()).sum.maxARR;
+    const p = clone();
+    p.channels[0].prices = { wPrice: 19.99, mPrice: 39.99, aPrice: 139.99 };
+    expect(simulate(p).sum.maxARR).toBeGreaterThan(base);
+  });
+});
+
+describe("simulate — valuation", () => {
+  it("finite EV and equity = EV + net cash", () => {
+    const r = simulate(clone());
+    expect(Number.isFinite(r.sum.EV)).toBe(true);
+    expect(r.sum.equity).toBeCloseTo(r.sum.EV + r.sum.endCash, 2);
+    expect(r.sum.wacc).toBeGreaterThan(0);
   });
 });

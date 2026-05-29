@@ -25,13 +25,12 @@ const PAID: Channel = {
   route: "WEB",
   funnel: { cpm: 20, impToInstall: 0.8, installToTrial: 13.3, trialToPaid: 30 },
   mix: { weekly: 55, monthly: 0, annual: 45 },
+  prices: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99 },
   retention: {
-    weekly: { r1: 55, r2: 78, r3: 84, rMature: 87 },
-    monthly: { r1: 70, r2: 82, r3: 86, rMature: 90 },
+    weekly: { r1: 55, r2: 78, rMature: 87 },
+    monthly: { r1: 70, r2: 82, rMature: 90 },
     annualRenewal: 45,
   },
-  satPoint: 3000,
-  satSlope: 0.6,
   color: T.teal,
 };
 
@@ -40,20 +39,19 @@ const ORGANIC: Channel = {
   route: "APP",
   funnel: { cpm: 0.56, impToInstall: 0.27, installToTrial: 10.9, trialToPaid: 25.6 },
   mix: { weekly: 80, monthly: 0, annual: 20 },
+  prices: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99 },
   retention: {
-    weekly: { r1: 45, r2: 72, r3: 80, rMature: 84 },
-    monthly: { r1: 60, r2: 76, r3: 82, rMature: 86 },
+    weekly: { r1: 45, r2: 72, rMature: 84 },
+    monthly: { r1: 60, r2: 76, rMature: 86 },
     annualRenewal: 25,
   },
-  satPoint: 300,
-  satSlope: 0.75,
   color: T.green,
 };
 
 export const DEFAULT_PARAMS: Params = {
   fx: FX_DEFAULT,
   arrGoal: 1_000_000,
-  plans: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99, trialDays: 3 },
+  plans: { trialDays: 3 },
   routes: {
     webFeePct: 6,
     webFixed: 0.4,
@@ -65,8 +63,6 @@ export const DEFAULT_PARAMS: Params = {
   capital: {
     startCash: 20000,
     creditLimit: 20000,
-    apDays: 30,
-    reserve: 0,
     founderDraw: 0,
   },
   marketing: {

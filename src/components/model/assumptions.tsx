@@ -4,9 +4,8 @@ import { NI, Sec } from "../atoms";
 
 type Upd = (mut: (p: Params) => void) => void;
 
-// Rarely-touched assumptions, tucked into one collapsible at the bottom. The
-// funnels, mix, retention, spend and route fee/payout live in the funnel blocks
-// above; the cross-cutting levers live in the plan strip.
+// Rarely-touched assumptions in one collapsible at the bottom. Spend, funnel,
+// pricing, mix, retention and route fee/payout live in the funnel blocks.
 export function Assumptions({ params, upd }: { params: Params; upd: Upd }) {
   const p = params;
   const [open, setOpen] = useState(false);
@@ -15,33 +14,25 @@ export function Assumptions({ params, upd }: { params: Params; upd: Upd }) {
   return (
     <div className="controls">
       <Sec
-        title="Advanced — pricing, valuation, fees, capital"
+        title="Advanced — trial, valuation, fees, currency"
         open={open}
         onToggle={() => setOpen((o) => !o)}
       >
-        <div className="subhead">pricing &amp; plans</div>
+        <div className="subhead">product &amp; infra</div>
         <div className="ni-row">
           <NI
-            label="Weekly $"
-            value={p.plans.wPrice}
-            onChange={(v) => upd((q) => (q.plans.wPrice = v))}
-          />
-          <NI
-            label="Monthly $"
-            value={p.plans.mPrice}
-            onChange={(v) => upd((q) => (q.plans.mPrice = v))}
-          />
-          <NI
-            label="Annual $"
-            value={p.plans.aPrice}
-            onChange={(v) => upd((q) => (q.plans.aPrice = v))}
-          />
-          <NI
-            label="Trial"
+            label="Trial days"
             value={p.plans.trialDays}
             width={40}
             suffix="d"
             onChange={(v) => upd((q) => (q.plans.trialDays = v))}
+          />
+          <NI
+            label="Infra % of revenue"
+            value={p.unit.infraPct}
+            width={48}
+            suffix="%"
+            onChange={(v) => upd((q) => (q.unit.infraPct = v))}
           />
         </div>
 
@@ -84,7 +75,7 @@ export function Assumptions({ params, upd }: { params: Params; upd: Upd }) {
           <span className="lblmono">WACC {wacc.toFixed(2)}%</span>
         </div>
 
-        <div className="subhead">fees &amp; capital</div>
+        <div className="subhead">fees &amp; currency</div>
         <div className="ni-row">
           <NI
             label="web fixed $/txn"
@@ -98,19 +89,6 @@ export function Assumptions({ params, upd }: { params: Params; upd: Upd }) {
             width={48}
             suffix="%"
             onChange={(v) => upd((q) => (q.routes.appFeeHigh = v))}
-          />
-          <NI
-            label="AP days"
-            value={p.capital.apDays}
-            width={44}
-            suffix="d"
-            onChange={(v) => upd((q) => (q.capital.apDays = v))}
-          />
-          <NI
-            label="Cash reserve"
-            value={p.capital.reserve}
-            width={64}
-            onChange={(v) => upd((q) => (q.capital.reserve = v))}
           />
           <NI
             label="IDR per USD"

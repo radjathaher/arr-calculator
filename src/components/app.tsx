@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ModelTab } from "./model/ModelTab";
-import { ExplainerTab } from "./explainer/ExplainerTab";
+import { ModelTab } from "./model/model-tab";
+import { ExplainerTab } from "./explainer/explainer-tab";
 
 type Tab = "explain" | "model";
 
@@ -11,7 +11,9 @@ export function App() {
       <header className="hdr">
         <div>
           <h1>Cash &amp; ARR Studio</h1>
-          <p>A subscription app, from $0 to a three-statement model and a valuation</p>
+          <p>
+            A subscription app, from $0 to a target ARR — paid vs organic, cash, and a valuation
+          </p>
         </div>
       </header>
       <nav className="pillnav">

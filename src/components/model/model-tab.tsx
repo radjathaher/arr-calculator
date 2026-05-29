@@ -5,11 +5,11 @@ import { simulate } from "../../lib/engine";
 import { DEFAULT_PARAMS } from "../../lib/defaults";
 import { decodeParams, encodeParams, hasBlankInputs } from "../../lib/urlState";
 import { NI } from "../atoms";
-import { Results } from "./Results";
-import { FunnelBlock } from "./FunnelBlock";
-import { ArrChart } from "./ArrChart";
-import { CashChart } from "./CashChart";
-import { Assumptions } from "./Assumptions";
+import { Results } from "./results";
+import { ArrChart } from "./arr-chart";
+import { CashChart } from "./cash-chart";
+import { FunnelBlock } from "./funnel-block";
+import { Assumptions } from "./assumptions";
 
 export function ModelTab() {
   const [params, setParams] = useState<Params>(() =>
@@ -38,7 +38,7 @@ export function ModelTab() {
   return (
     <div className="model">
       <div className="topbar">
-        <div className="lblmono">Turn the funnels — watch when you hit your ARR goal</div>
+        <div className="lblmono">Compare the two funnels — watch when you hit your ARR goal</div>
         <div className="topbar-actions">
           <div className="seg">
             {(["USD", "IDR"] as Currency[]).map((c) => (
@@ -49,6 +49,13 @@ export function ModelTab() {
           </div>
         </div>
       </div>
+
+      {sim && (
+        <div className="charts">
+          <ArrChart sim={sim} goal={params.arrGoal} cur={cur} fx={fx} />
+          <CashChart sim={sim} creditLimit={params.capital.creditLimit} cur={cur} fx={fx} />
+        </div>
+      )}
 
       <Results sim={sim} goal={params.arrGoal} cur={cur} fx={fx} />
 
@@ -86,15 +93,10 @@ export function ModelTab() {
         />
       </div>
 
-      <FunnelBlock params={params} idx={0} upd={upd} cur={cur} fx={fx} />
-      <FunnelBlock params={params} idx={1} upd={upd} cur={cur} fx={fx} />
-
-      {sim && (
-        <>
-          <ArrChart sim={sim} goal={params.arrGoal} cur={cur} fx={fx} />
-          <CashChart sim={sim} cur={cur} fx={fx} />
-        </>
-      )}
+      <div className="channels-2col">
+        <FunnelBlock params={params} idx={0} upd={upd} cur={cur} fx={fx} />
+        <FunnelBlock params={params} idx={1} upd={upd} cur={cur} fx={fx} />
+      </div>
 
       <Assumptions params={params} upd={upd} />
     </div>

@@ -152,6 +152,36 @@ table.stmt tr.spacer td {
   gap: 14px;
   align-items: flex-end;
 }
+.channels-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .channels-2col {
+    grid-template-columns: 1fr;
+  }
+}
+.funnel-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fl-cost {
+  margin-left: auto;
+  font-family: "IBM Plex Mono";
+  font-size: 11px;
+  color: var(--muted);
+}
+.fl-cost b {
+  color: var(--teal);
+}
 .funnel-block {
   background: var(--panel);
   border: 1px solid var(--line);

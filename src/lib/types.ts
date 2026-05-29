@@ -6,15 +6,19 @@
 export type RouteKind = "WEB" | "APP";
 export type PlanKind = "weekly" | "monthly" | "annual";
 
-// Per-tick survival fractions (percentages, e.g. 55 = 55%). The brutal first
-// renewal, then it stabilises. A property of the channel x plan cell: it proxies
-// the unobservable customer quality revealed by both how a user was acquired and
-// which plan they self-selected into.
+// Per-tick survival fractions (percentages, e.g. 55 = 55%). Three benchmark
+// points: the 1st renewal (brutal), the 2nd, then a flat mature rate from the
+// 3rd renewal onward.
 export interface StepDown {
   r1: number;
   r2: number;
-  r3: number;
   rMature: number;
+}
+
+export interface ChannelPrices {
+  wPrice: number;
+  mPrice: number;
+  aPrice: number;
 }
 
 export interface ChannelRetention {
@@ -41,17 +45,13 @@ export interface Channel {
   route: RouteKind;
   funnel: Funnel;
   mix: PlanMix;
+  prices: ChannelPrices; // per-channel pricing (paid vs organic may differ)
   retention: ChannelRetention;
-  satPoint: number; // daily spend ($/day) where CAC begins to climb
-  satSlope: number; // steepness exponent
   color: string;
 }
 
 export interface Plans {
-  wPrice: number;
-  mPrice: number;
-  aPrice: number;
-  trialDays: number;
+  trialDays: number; // global trial length
 }
 
 export interface Routes {
@@ -65,9 +65,7 @@ export interface Routes {
 
 export interface Capital {
   startCash: number; // initial paid-in equity
-  creditLimit: number;
-  apDays: number; // vendor terms / card float
-  reserve: number; // cash kept before auto-paying down the card
+  creditLimit: number; // net balance can draw down to −creditLimit before insolvent
   founderDraw: number; // founder monthly distribution (flat, from month 0)
 }
 
@@ -105,53 +103,25 @@ export interface Params {
 
 export interface SeriesPoint {
   i: number;
-  cash: number;
-  card: number; // negative for charting
+  net: number; // net cash = cash − credit drawn (negative = on credit)
   arr: number;
 }
 
-export interface ChannelResult {
-  name: string;
-  color: string;
-  route: RouteKind;
-  spend: number;
-  cust: number;
-  cac: number;
-}
-
 export interface SimSummary {
-  d1m: number; // first day index ARR >= $1M (-1 if never)
+  d1m: number; // first day index ARR >= target (-1 if never)
   d1mDate: Date | null;
   endARR: number;
   maxARR: number;
-  endCash: number;
-  minCash: number;
-  peakFunding: number; // max external cash needed = max(0, -minCash)
-  insolventDay: number;
+  endCash: number; // net balance at the stop day
+  minCash: number; // lowest net balance over the run
+  peakFunding: number; // external cash needed beyond credit = max(0, −minBal − creditLimit)
+  insolventDay: number; // first day net balance < −creditLimit
   insolventDate: Date | null;
-  peakCard: number;
-  blendedCAC: number;
-  ltv: number;
-  ltvCac: number;
-  gm: number;
-  totSpend: number;
-  paybackWk: number;
-  effAR: number;
-  blW: number;
-  blA: number;
-  Lwbl: number;
-  totVol: number;
-  feeW: number;
-  feeI: number;
-  webVol: number;
-  iapVol: number;
-  billCum: number;
-  blendedFeeRate: number;
+  gm: number; // blended gross margin (0..1)
   EV: number; // enterprise value (DCF to today)
-  equity: number; // EV − card debt + cash
+  equity: number; // EV + net cash balance
   evMultiple: number; // EV / horizon ARR
   wacc: number; // % discount rate
-  perCh: ChannelResult[];
 }
 
 export interface SimResult {
