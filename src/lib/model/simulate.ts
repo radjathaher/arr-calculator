@@ -194,14 +194,15 @@ export function simulate(p: Params): SimResult {
     if (bal < minBal) minBal = bal;
     if (bal < insolventFloor && insolventDay < 0) insolventDay = d;
 
-    // Operations — marketing spend and infra ride the credit line but can never
-    // breach it: both are funded only out of the remaining credit headroom. Infra
-    // is paid first (non-discretionary), then ad spend takes what's left; any infra
-    // that can't be covered while pinned at the limit is deferred rather than
-    // pushing the balance below the floor and faking insolvency.
-    const room = Math.max(0, bal + limit);
-    const infraPaid = Math.min(infD, room);
-    const spendRoom = room - infraPaid;
+    // Operations — recycle-only marketing. Infra (a non-discretionary fixed cost)
+    // is paid first and may draw the credit line to stay solvent. Marketing then
+    // spends ONLY out of the cash actually on hand after infra — it never draws
+    // the credit line. So you spend collected cash, pause while it's in transit,
+    // get paid back, and spend again (a draw-and-recover cycle) instead of pinning
+    // the credit at its limit. The credit line is a backstop for fixed costs and
+    // founder draws, not a perpetual ad-spend bridge.
+    const infraPaid = Math.min(infD, Math.max(0, bal + limit));
+    const spendRoom = Math.max(0, bal - infraPaid);
     // Budgets are daily rates; the ramp grows the daily rate each month.
     const rampF = Math.pow(1 + p.marketing.budgetRampPct / 100, mi);
     const desired0 = budgets[0] * rampF;

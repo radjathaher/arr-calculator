@@ -163,25 +163,28 @@ IAP   charge ─────accrue all month─────▶ │
         </pre>
       </Domain>
 
-      <Domain tag="05 · Cash" title="One net balance, riding a credit line">
+      <Domain tag="05 · Cash" title="One net balance, recycled marketing">
         <p>
-          The model tracks a single <b>net balance = cash − credit drawn</b>. Payouts add to it;
-          operations subtract from it but can never breach the floor:
+          The model tracks a single <b>net balance = cash − credit drawn</b>. Payouts add to it.
+          Marketing is <b>recycle-only</b>: it spends just the cash on hand, so you spend, wait for
+          the payout, get paid back, and spend again — it never draws the credit line:
         </p>
         <pre className="expl-code">
-          {`room        = max(0, balance + creditLimit)
-infraPaid   = min(infra, room)              (infra paid first)
-spendRoom   = room − infraPaid
-adSpend     = min(desiredAdSpend, spendRoom) (ad spend takes the rest)
+          {`infraPaid   = min(infra, max(0, balance + creditLimit))  (fixed cost; may use credit)
+spendRoom   = max(0, balance − infraPaid)                (positive cash only)
+adSpend     = min(desiredAdSpend, spendRoom)             (ads self-funded)
 
-balance −= adSpend + infraPaid               (never < −creditLimit)`}
+balance −= adSpend + infraPaid`}
         </pre>
         <p>
-          Operations ride the credit line but are clamped to the remaining headroom — they can{" "}
-          <b>never</b> push the balance below <code>−creditLimit</code>. The only thing that can is a{" "}
-          <b>founder draw</b> on the 1st of the month; the first day the balance drops below the
-          floor is <b>insolvency</b>. <b>Cash-positive</b> = the first day the balance climbs back to{" "}
-          <code>≥ 0</code> after having dipped negative.
+          Because ad spend only ever uses cash you actually hold, the net balance draws down as you
+          buy installs, then recovers ~10 days later (web) or on the next app-store lump as the cash
+          lands — a draw-and-recover sawtooth rather than a pinned credit line. Growth is therefore
+          self-funded: it can only go as fast as collected cash allows. The credit line is a backstop
+          for <b>infra</b> and <b>founder draws</b>; a draw on the 1st of the month is the only thing
+          that can push the balance below <code>−creditLimit</code> (<b>insolvency</b>).{" "}
+          <b>Cash-positive</b> = the first day the balance climbs back to <code>≥ 0</code> after
+          dipping negative.
         </p>
       </Domain>
 
