@@ -262,22 +262,30 @@ export function simulate(p: Params): SimResult {
       head = h;
     }
 
-    // Per-channel marketing spend: each channel's monthly budget (× ramp),
-    // deployed evenly across the month's days.
+    // Per-channel marketing spend (budget × ramp) — but you can only deploy what
+    // your working capital can fund: cash above the reserve plus remaining credit
+    // headroom. A budget you cannot afford is scaled down (you can't spend money
+    // you don't have); cash still goes negative from payout timing or a founder
+    // draw, just not from impossible ad spend.
     const dim = DAYS_IN_MONTH[mi];
     const rampF = Math.pow(1 + p.marketing.budgetRampPct / 100, mi);
+    const desired0 = dim > 0 ? (budgets[0] * rampF) / dim : 0;
+    const desired1 = dim > 0 ? (budgets[1] * rampF) / dim : 0;
+    const desiredTotal = desired0 + desired1;
+    const available = Math.max(0, cash - reserve) + Math.max(0, limit - card);
+    const factor = desiredTotal > available && desiredTotal > 0 ? available / desiredTotal : 1;
+    const sp = [desired0 * factor, desired1 * factor];
     let total = 0;
     for (let i = 0; i < 2; i++) {
-      const sp = dim > 0 ? (budgets[i] * rampF) / dim : 0;
-      total += sp;
-      if (sp > 0) {
+      if (sp[i] > 0) {
+        total += sp[i];
         const cust = customersFromSpend(
-          sp,
+          sp[i],
           base[i],
           p.channels[i].satPoint,
           p.channels[i].satSlope,
         );
-        chSpend[i] += sp;
+        chSpend[i] += sp[i];
         chCust[i] += cust;
         sched(p.channels[i], i, d, cust);
       }

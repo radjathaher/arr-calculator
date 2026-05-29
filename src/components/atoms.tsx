@@ -1,32 +1,49 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
-// Number input with no spinner arrows; parses to a number on change.
+// Numeric field backed by a local text buffer so the user can type freely
+// (no HTML5 step/validation rejecting values like 600, no stuck leading zero).
+// Commits a parsed number on every keystroke; normalises the display on blur.
 export function NI({
   label,
   value,
   onChange,
-  step = 1,
   width = 56,
   suffix,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
-  step?: number;
+  step?: number; // accepted for call-site compatibility; not applied to the DOM
   width?: number;
   suffix?: string;
 }) {
+  const [text, setText] = useState(() => String(value));
+
+  // Resync when the value changes from outside (URL load, currency, etc.).
+  useEffect(() => {
+    if (Number.parseFloat(text) !== value) setText(String(value));
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <label className="ni">
       <span>{label}</span>
       <span className="ni-in">
         <input
           className="nospin"
-          type="number"
+          type="text"
           inputMode="decimal"
-          value={value}
-          step={step}
-          onChange={(e) => onChange(e.target.value === "" ? 0 : Number.parseFloat(e.target.value))}
+          value={text}
+          onChange={(e) => {
+            const raw = e.target.value;
+            setText(raw);
+            if (raw === "" || raw === "-" || raw === ".") {
+              onChange(0);
+              return;
+            }
+            const n = Number.parseFloat(raw);
+            if (Number.isFinite(n)) onChange(n);
+          }}
+          onBlur={() => setText(String(value))}
           style={{ width }}
         />
         {suffix && <i>{suffix}</i>}
