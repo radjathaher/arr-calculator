@@ -140,46 +140,57 @@ table.stmt tr.spacer td {
   margin-bottom: 10px;
 }
 
-/* Founder cockpit: decisions (left) + outcomes (right) */
-.cockpit {
-  display: grid;
-  grid-template-columns: minmax(260px, 360px) 1fr;
-  gap: 12px;
-  align-items: start;
+/* Single-column compact: results on top, then funnel blocks */
+.results-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-@media (max-width: 760px) {
-  .cockpit {
-    grid-template-columns: 1fr;
-  }
+.plan-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
 }
-.cockpit-decisions {
+.funnel-block {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-top-width: 3px;
+  border-radius: 11px;
+  padding: 11px 14px;
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 6px;
 }
-.cockpit-h {
-  font-family: "Fraunces", serif;
-  font-size: 15px;
+.fb-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fb-name {
   font-weight: 600;
+  font-size: 13px;
 }
-.cockpit-decisions .ni > span {
-  font-size: 11px;
-}
-.cockpit-hint {
-  font-size: 11px;
-  line-height: 1.5;
+.fb-metric {
+  margin-left: auto;
+  font-family: "IBM Plex Mono";
+  font-size: 11.5px;
   color: var(--muted);
-  border-top: 1px solid var(--line);
-  padding-top: 9px;
 }
-.cockpit-outcomes {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
+.fb-metric b {
+  color: var(--ink);
+}
+.econ {
+  font-family: "IBM Plex Mono";
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.econ b {
+  color: var(--teal);
 }
 .verdict {
   border-radius: 12px;

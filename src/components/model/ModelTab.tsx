@@ -4,7 +4,9 @@ import type { Currency } from "../../lib/format";
 import { simulate } from "../../lib/engine";
 import { DEFAULT_PARAMS } from "../../lib/defaults";
 import { decodeParams, encodeParams, hasBlankInputs } from "../../lib/urlState";
-import { Cockpit } from "./Cockpit";
+import { NI } from "../atoms";
+import { Results } from "./Results";
+import { FunnelBlock } from "./FunnelBlock";
 import { ArrChart } from "./ArrChart";
 import { CashChart } from "./CashChart";
 import { Assumptions } from "./Assumptions";
@@ -24,7 +26,6 @@ export function ModelTab() {
       return n;
     });
 
-  // Pause the calculation while any input is blank.
   const sim = useMemo(() => (hasBlankInputs(params) ? null : simulate(params)), [params]);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export function ModelTab() {
   return (
     <div className="model">
       <div className="topbar">
-        <div className="lblmono">Move the dials — watch when you hit your ARR goal</div>
+        <div className="lblmono">Turn the funnels — watch when you hit your ARR goal</div>
         <div className="topbar-actions">
           <div className="seg">
             {(["USD", "IDR"] as Currency[]).map((c) => (
@@ -49,7 +50,44 @@ export function ModelTab() {
         </div>
       </div>
 
-      <Cockpit params={params} upd={upd} sim={sim} cur={cur} fx={fx} />
+      <Results sim={sim} goal={params.arrGoal} cur={cur} fx={fx} />
+
+      <div className="card plan-strip">
+        <NI
+          label="ARR goal"
+          value={params.arrGoal}
+          width={104}
+          onChange={(v) => upd((q) => (q.arrGoal = v))}
+        />
+        <NI
+          label="grow spend %/mo"
+          value={params.marketing.budgetRampPct}
+          width={56}
+          suffix="%/mo"
+          onChange={(v) => upd((q) => (q.marketing.budgetRampPct = v))}
+        />
+        <NI
+          label="founder draw $/mo"
+          value={params.capital.founderDraw}
+          width={84}
+          onChange={(v) => upd((q) => (q.capital.founderDraw = v))}
+        />
+        <NI
+          label="starting cash"
+          value={params.capital.startCash}
+          width={84}
+          onChange={(v) => upd((q) => (q.capital.startCash = v))}
+        />
+        <NI
+          label="credit line"
+          value={params.capital.creditLimit}
+          width={84}
+          onChange={(v) => upd((q) => (q.capital.creditLimit = v))}
+        />
+      </div>
+
+      <FunnelBlock params={params} idx={0} upd={upd} cur={cur} fx={fx} />
+      <FunnelBlock params={params} idx={1} upd={upd} cur={cur} fx={fx} />
 
       {sim && (
         <>
@@ -58,7 +96,7 @@ export function ModelTab() {
         </>
       )}
 
-      <Assumptions params={params} upd={upd} cur={cur} fx={fx} />
+      <Assumptions params={params} upd={upd} />
     </div>
   );
 }
