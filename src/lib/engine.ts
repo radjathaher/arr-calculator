@@ -1,12 +1,4 @@
-import type {
-  Channel,
-  DailyBlocks,
-  MonthSchedule,
-  Params,
-  SeriesPoint,
-  SimResult,
-  StepDown,
-} from "./types";
+import type { Channel, DailyBlocks, Params, SeriesPoint, SimResult, StepDown } from "./types";
 import { baseCAC, customersFromSpend } from "./saturation";
 
 // ---- Calendar -------------------------------------------------------------
@@ -57,12 +49,6 @@ export const DAYS_IN_MONTH: number[] = (() => {
   for (const d of DAYS) out[d.mi]++;
   return out;
 })();
-
-// Resolve a monthly schedule at month index mi (override wins over base).
-export function monthValue(s: MonthSchedule, mi: number): number {
-  const o = s.overrides[mi];
-  return o === undefined ? s.base : o;
-}
 
 // Cumulative survival fraction of a step-down curve at tick k (percentages in).
 export function tickRet(sd: StepDown, k: number): number {
@@ -205,7 +191,7 @@ export function simulate(p: Params): SimResult {
   const reserve = p.capital.reserve;
   const limit = p.capital.creditLimit;
   const apDays = p.capital.apDays;
-  const share = [p.marketing.paidShare / 100, 1 - p.marketing.paidShare / 100];
+  const budgets = [p.marketing.paidBudget, p.marketing.organicBudget];
 
   for (let d = 0; d < N; d++) {
     const mi = DAYS[d].mi;
@@ -248,9 +234,9 @@ export function simulate(p: Params): SimResult {
       head++;
     }
 
-    // Founder distribution on the first of each month (per the schedule).
+    // Founder distribution on the first of each month (flat).
     if (DAYS[d].first) {
-      const draw = monthValue(p.capital.draw, mi);
+      const draw = p.capital.founderDraw;
       if (draw > 0) {
         cash -= draw;
         distribution[d] = draw;
@@ -276,11 +262,14 @@ export function simulate(p: Params): SimResult {
       head = h;
     }
 
-    // Marketing spend: the month's budget, deployed evenly across its days.
-    const monthBudget = monthValue(p.marketing.budget, mi);
-    const total = DAYS_IN_MONTH[mi] > 0 ? monthBudget / DAYS_IN_MONTH[mi] : 0;
+    // Per-channel marketing spend: each channel's monthly budget (× ramp),
+    // deployed evenly across the month's days.
+    const dim = DAYS_IN_MONTH[mi];
+    const rampF = Math.pow(1 + p.marketing.budgetRampPct / 100, mi);
+    let total = 0;
     for (let i = 0; i < 2; i++) {
-      const sp = total * share[i];
+      const sp = dim > 0 ? (budgets[i] * rampF) / dim : 0;
+      total += sp;
       if (sp > 0) {
         const cust = customersFromSpend(
           sp,

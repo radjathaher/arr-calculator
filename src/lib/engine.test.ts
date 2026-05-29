@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DAYS_IN_MONTH,
-  NDAYS,
-  NMONTHS,
-  monthValue,
-  simulate,
-  tickRet,
-  weeklyLifetime,
-} from "./engine";
+import { DAYS_IN_MONTH, NDAYS, NMONTHS, simulate, tickRet, weeklyLifetime } from "./engine";
 import { baseCAC, customersFromSpend, effectiveCAC } from "./saturation";
 import { DEFAULT_PARAMS } from "./defaults";
 import type { Params } from "./types";
@@ -65,14 +57,6 @@ describe("retention", () => {
   });
 });
 
-describe("monthValue", () => {
-  it("returns base unless overridden", () => {
-    const s = { base: 100, overrides: { 3: 250 } };
-    expect(monthValue(s, 0)).toBe(100);
-    expect(monthValue(s, 3)).toBe(250);
-  });
-});
-
 describe("simulate", () => {
   it("is deterministic and emits full-length daily blocks", () => {
     const a = simulate(clone());
@@ -92,7 +76,8 @@ describe("simulate", () => {
 
   it("with zero budget stays at starting cash and acquires nobody", () => {
     const p = clone();
-    p.marketing.budget = { base: 0, overrides: {} };
+    p.marketing.paidBudget = 0;
+    p.marketing.organicBudget = 0;
     const r = simulate(p);
     expect(r.sum.maxARR).toBe(0);
     expect(r.sum.insolventDay).toBe(-1);
@@ -101,19 +86,19 @@ describe("simulate", () => {
 
   it("shows insolvency (no auto-throttle) when budget far exceeds working capital", () => {
     const p = clone();
-    p.marketing.budget = { base: 500000, overrides: {} };
+    p.marketing.paidBudget = 500000;
     const r = simulate(p);
     expect(r.sum.insolventDay).toBeGreaterThanOrEqual(0);
     expect(r.sum.minCash).toBeLessThan(0);
     expect(r.sum.peakFunding).toBeGreaterThan(0);
   });
 
-  it("a per-month budget override changes the trajectory", () => {
-    const base = simulate(clone());
+  it("a positive budget ramp raises total spend", () => {
+    const flat = simulate(clone());
     const p = clone();
-    p.marketing.budget = { base: 12000, overrides: { 10: 60000, 11: 60000 } };
-    const bumped = simulate(p);
-    expect(bumped.sum.totSpend).toBeGreaterThan(base.sum.totSpend);
+    p.marketing.budgetRampPct = 5;
+    const ramped = simulate(p);
+    expect(ramped.sum.totSpend).toBeGreaterThan(flat.sum.totSpend);
   });
 
   it("blended effective AR days sit between web and app payout lags", () => {
@@ -122,10 +107,10 @@ describe("simulate", () => {
     expect(r.sum.effAR).toBeLessThanOrEqual(DEFAULT_PARAMS.routes.appPayoutDays);
   });
 
-  it("founder draw reduces ending cash one-for-one vs no draw (when solvent)", () => {
+  it("founder draw reduces ending cash vs no draw (when solvent)", () => {
     const noDraw = simulate(clone());
     const p = clone();
-    p.capital.draw = { base: 1000, overrides: {} };
+    p.capital.founderDraw = 1000;
     const withDraw = simulate(p);
     expect(withDraw.sum.endCash).toBeLessThan(noDraw.sum.endCash);
   });

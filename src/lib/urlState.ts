@@ -1,10 +1,9 @@
-import type { MonthSchedule, Params, RouteKind } from "./types";
+import type { Params, RouteKind } from "./types";
 import { DEFAULT_PARAMS } from "./defaults";
 
 // Flat, URL-friendly codec for Params so scenarios round-trip through the
 // querystring (shareable links). Only values that differ from the defaults are
-// written, keeping URLs short. Month schedules encode as a base value plus a
-// compact sparse-override string ("mi:val;mi:val").
+// written, keeping URLs short.
 
 interface NumAcc {
   k: string;
@@ -201,9 +200,24 @@ const ACC: Acc[] = [
     (p, v) => void (p.capital.reserve = v),
   ),
   num(
-    "paid",
-    (p) => p.marketing.paidShare,
-    (p, v) => void (p.marketing.paidShare = v),
+    "draw",
+    (p) => p.capital.founderDraw,
+    (p, v) => void (p.capital.founderDraw = v),
+  ),
+  num(
+    "pb",
+    (p) => p.marketing.paidBudget,
+    (p, v) => void (p.marketing.paidBudget = v),
+  ),
+  num(
+    "ob",
+    (p) => p.marketing.organicBudget,
+    (p, v) => void (p.marketing.organicBudget = v),
+  ),
+  num(
+    "ramp",
+    (p) => p.marketing.budgetRampPct,
+    (p, v) => void (p.marketing.budgetRampPct = v),
   ),
   num(
     "infra",
@@ -239,53 +253,6 @@ const ACC: Acc[] = [
   ...channelAccessors(1),
 ];
 
-function encodeOverrides(ov: Record<number, number>): string {
-  return Object.keys(ov)
-    .map((k) => Number(k))
-    .sort((a, b) => a - b)
-    .map((k) => `${k}:${ov[k]}`)
-    .join(";");
-}
-
-function decodeOverrides(raw: string): Record<number, number> {
-  const out: Record<number, number> = {};
-  for (const pair of raw.split(";")) {
-    if (!pair) continue;
-    const [k, v] = pair.split(":");
-    const ki = Number.parseInt(k);
-    const vf = Number.parseFloat(v);
-    if (Number.isInteger(ki) && Number.isFinite(vf)) out[ki] = vf;
-  }
-  return out;
-}
-
-function encodeSched(
-  sp: URLSearchParams,
-  baseKey: string,
-  ovKey: string,
-  s: MonthSchedule,
-  def: MonthSchedule,
-): void {
-  if (s.base !== def.base) sp.set(baseKey, String(s.base));
-  const ov = encodeOverrides(s.overrides);
-  if (ov) sp.set(ovKey, ov);
-}
-
-function decodeSched(
-  sp: URLSearchParams,
-  baseKey: string,
-  ovKey: string,
-  target: MonthSchedule,
-): void {
-  const b = sp.get(baseKey);
-  if (b != null) {
-    const v = Number.parseFloat(b);
-    if (Number.isFinite(v)) target.base = v;
-  }
-  const ov = sp.get(ovKey);
-  if (ov != null) target.overrides = decodeOverrides(ov);
-}
-
 export function encodeParams(p: Params): string {
   const sp = new URLSearchParams();
   for (const a of ACC) {
@@ -297,8 +264,6 @@ export function encodeParams(p: Params): string {
       if (v !== a.get(DEFAULT_PARAMS)) sp.set(a.k, v);
     }
   }
-  encodeSched(sp, "bud", "budo", p.marketing.budget, DEFAULT_PARAMS.marketing.budget);
-  encodeSched(sp, "draw", "drawo", p.capital.draw, DEFAULT_PARAMS.capital.draw);
   return sp.toString();
 }
 
@@ -315,7 +280,5 @@ export function decodeParams(qs: string): Params {
       a.set(p, raw);
     }
   }
-  decodeSched(sp, "bud", "budo", p.marketing.budget);
-  decodeSched(sp, "draw", "drawo", p.capital.draw);
   return p;
 }

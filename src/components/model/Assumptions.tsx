@@ -6,6 +6,8 @@ import { ChannelEditor } from "./ChannelEditor";
 
 type Upd = (mut: (p: Params) => void) => void;
 
+// Advanced, rarely-touched assumptions. The six founder decisions live in the
+// cockpit; everything here ships with a sensible default.
 export function Assumptions({
   params,
   upd,
@@ -19,70 +21,19 @@ export function Assumptions({
 }) {
   const p = params;
   const [open, setOpen] = useState<Record<string, boolean>>({
-    cap: false,
     price: false,
     paid: false,
     org: false,
     fee: false,
     unit: false,
     dcf: false,
+    cap: false,
   });
   const tog = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   const wacc = p.valuation.rfRate + p.valuation.beta * p.valuation.erp;
 
   return (
     <div className="controls">
-      <Sec title="Capital, allocation & currency" open={open.cap} onToggle={() => tog("cap")}>
-        <div className="ni-row">
-          <NI
-            label="Start cash"
-            value={p.capital.startCash}
-            step={1000}
-            width={74}
-            onChange={(v) => upd((q) => (q.capital.startCash = v))}
-          />
-          <NI
-            label="Credit limit"
-            value={p.capital.creditLimit}
-            step={1000}
-            width={74}
-            onChange={(v) => upd((q) => (q.capital.creditLimit = v))}
-          />
-          <NI
-            label="AP days"
-            value={p.capital.apDays}
-            width={44}
-            suffix="d"
-            onChange={(v) => upd((q) => (q.capital.apDays = v))}
-          />
-          <NI
-            label="Reserve"
-            value={p.capital.reserve}
-            step={500}
-            width={64}
-            onChange={(v) => upd((q) => (q.capital.reserve = v))}
-          />
-        </div>
-        <div className="ni-row">
-          <NI
-            label="Paid share"
-            value={p.marketing.paidShare}
-            step={5}
-            width={48}
-            suffix="%"
-            onChange={(v) => upd((q) => (q.marketing.paidShare = Math.max(0, Math.min(100, v))))}
-          />
-          <span className="lblmono">organic {100 - p.marketing.paidShare}%</span>
-          <NI
-            label="IDR per USD"
-            value={p.fx}
-            step={10}
-            width={70}
-            onChange={(v) => upd((q) => (q.fx = v))}
-          />
-        </div>
-      </Sec>
-
       <Sec title="Pricing & plans" open={open.price} onToggle={() => tog("price")}>
         <div className="ni-row">
           <NI
@@ -251,9 +202,31 @@ export function Assumptions({
             onChange={(v) => upd((q) => (q.valuation.termGrowth = v))}
           />
         </div>
-        <div className="inline-note">
-          Unlevered FCF discounted monthly to enterprise value; terminal value = Gordon growth, with
-          the implied ARR multiple shown as a cross-check.
+      </Sec>
+
+      <Sec title="Capital & currency" open={open.cap} onToggle={() => tog("cap")}>
+        <div className="ni-row">
+          <NI
+            label="AP days"
+            value={p.capital.apDays}
+            width={44}
+            suffix="d"
+            onChange={(v) => upd((q) => (q.capital.apDays = v))}
+          />
+          <NI
+            label="Cash reserve"
+            value={p.capital.reserve}
+            step={500}
+            width={64}
+            onChange={(v) => upd((q) => (q.capital.reserve = v))}
+          />
+          <NI
+            label="IDR per USD"
+            value={p.fx}
+            step={10}
+            width={70}
+            onChange={(v) => upd((q) => (q.fx = v))}
+          />
         </div>
       </Sec>
     </div>

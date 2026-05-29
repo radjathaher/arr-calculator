@@ -37,8 +37,10 @@ describe("articulation", () => {
 
   it("holds under an aggressive (insolvent) scenario too", () => {
     const { st } = run((p) => {
-      p.marketing.budget = { base: 80000, overrides: { 20: 200000 } };
-      p.capital.draw = { base: 3000, overrides: {} };
+      p.marketing.paidBudget = 80000;
+      p.marketing.organicBudget = 20000;
+      p.marketing.budgetRampPct = 3;
+      p.capital.founderDraw = 3000;
     });
     expect(st.balanced).toBe(true);
   });

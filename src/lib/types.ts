@@ -63,24 +63,18 @@ export interface Routes {
   appPayoutDays: number;
 }
 
-// A time-varying monthly input: a base value applied to every month, plus
-// sparse per-month overrides keyed by month index (0 = Jun 2026).
-export interface MonthSchedule {
-  base: number;
-  overrides: Record<number, number>;
-}
-
 export interface Capital {
   startCash: number; // initial paid-in equity
   creditLimit: number;
   apDays: number; // vendor terms / card float
   reserve: number; // cash kept before auto-paying down the card
-  draw: MonthSchedule; // founder monthly distribution
+  founderDraw: number; // founder monthly distribution (flat, from month 0)
 }
 
 export interface Marketing {
-  budget: MonthSchedule; // monthly marketing spend
-  paidShare: number; // % of budget to the paid channel (rest organic)
+  paidBudget: number; // paid-ads spend $/month (initial)
+  organicBudget: number; // organic/UGC spend $/month (initial)
+  budgetRampPct: number; // monthly growth applied to both channels
 }
 
 export interface UnitEcon {
