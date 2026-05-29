@@ -14,19 +14,12 @@ export function Assumptions({ params, upd }: { params: Params; upd: Upd }) {
   return (
     <div className="controls">
       <Sec
-        title="Advanced — trial, valuation, fees, currency"
+        title="Advanced — valuation, fees, currency"
         open={open}
         onToggle={() => setOpen((o) => !o)}
       >
         <div className="subhead">product &amp; infra</div>
         <div className="ni-row">
-          <NI
-            label="Trial days"
-            value={p.plans.trialDays}
-            width={40}
-            suffix="d"
-            onChange={(v) => upd((q) => (q.plans.trialDays = v))}
-          />
           <NI
             label="Infra % of revenue"
             value={p.unit.infraPct}

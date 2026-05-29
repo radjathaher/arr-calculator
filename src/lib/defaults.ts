@@ -26,10 +26,11 @@ const PAID: Channel = {
   funnel: { cpm: 20, impToInstall: 0.8, installToTrial: 13.3, trialToPaid: 30 },
   mix: { weekly: 55, monthly: 0, annual: 45 },
   prices: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99 },
+  trials: { weekly: 3, monthly: 0, annual: 0 },
   retention: {
     weekly: { r1: 55, r2: 78, rMature: 87 },
     monthly: { r1: 70, r2: 82, rMature: 90 },
-    annualRenewal: 45,
+    annual: { r1: 45, r2: 70, rMature: 85 },
   },
   color: T.teal,
 };
@@ -40,10 +41,11 @@ const ORGANIC: Channel = {
   funnel: { cpm: 0.56, impToInstall: 0.27, installToTrial: 10.9, trialToPaid: 25.6 },
   mix: { weekly: 80, monthly: 0, annual: 20 },
   prices: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99 },
+  trials: { weekly: 3, monthly: 0, annual: 0 },
   retention: {
     weekly: { r1: 45, r2: 72, rMature: 84 },
     monthly: { r1: 60, r2: 76, rMature: 86 },
-    annualRenewal: 25,
+    annual: { r1: 25, r2: 60, rMature: 80 },
   },
   color: T.green,
 };
@@ -51,7 +53,6 @@ const ORGANIC: Channel = {
 export const DEFAULT_PARAMS: Params = {
   fx: FX_DEFAULT,
   arrGoal: 1_000_000,
-  plans: { trialDays: 3 },
   routes: {
     webFeePct: 6,
     webFixed: 0.4,

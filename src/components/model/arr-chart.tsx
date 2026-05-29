@@ -14,6 +14,16 @@ import type { Currency } from "../../lib/format";
 import { dstr, money } from "../../lib/format";
 import { DAYS, NDAYS } from "../../lib/engine";
 
+// Round a value up to a clean axis bound: 1, 2, 2.5, or 5 times a power of ten.
+function niceCeil(v: number): number {
+  if (v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const base = 10 ** exp;
+  const frac = v / base;
+  const step = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 2.5 ? 2.5 : frac <= 5 ? 5 : 10;
+  return step * base;
+}
+
 // The single headline chart for the minimal cockpit view: ARR climbing toward $1M.
 export function ArrChart({
   sim,
@@ -35,6 +45,18 @@ export function ArrChart({
     return out;
   }, []);
 
+  // Round the axis up to "nice" evenly-spaced values so the ticks read
+  // cleanly (e.g. 0 · 250k · 500k · ...) instead of recharts' raw data maxima.
+  const { yMax, yTicks } = useMemo(() => {
+    let hi = Number.isFinite(goal) ? goal : 0;
+    for (const s of sim.series) if (s.arr > hi) hi = s.arr;
+    const max = niceCeil(hi);
+    const step = max / 4;
+    const out: number[] = [];
+    for (let v = 0; v <= max + 1; v += step) out.push(Math.round(v));
+    return { yMax: max, yTicks: out };
+  }, [sim, goal]);
+
   return (
     <div className="card">
       <h3>ARR &rarr; {money(goal, cur, fx)}</h3>
@@ -52,6 +74,8 @@ export function ArrChart({
             tick={{ fontSize: 10, fill: "var(--muted)" }}
           />
           <YAxis
+            domain={[0, yMax]}
+            ticks={yTicks}
             tickFormatter={(v: number) => money(v, cur, fx)}
             tick={{ fontSize: 10, fill: "var(--muted)" }}
             width={48}

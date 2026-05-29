@@ -7,11 +7,13 @@ describe("urlState", () => {
     expect(encodeParams(DEFAULT_PARAMS)).toBe("");
   });
 
-  it("round-trips per-channel prices, route, retention and the cockpit levers", () => {
+  it("round-trips per-channel prices, route, annual retention, per-plan trials and levers", () => {
     const p = structuredClone(DEFAULT_PARAMS);
     p.channels[0].prices.wPrice = 12.99;
     p.channels[0].route = "APP";
-    p.channels[1].retention.annualRenewal = 33;
+    p.channels[1].retention.annual.rMature = 77;
+    p.channels[0].trials.weekly = 7;
+    p.channels[1].trials.annual = 14;
     p.marketing.paidBudget = 9000;
     p.capital.founderDraw = 2500;
     p.arrGoal = 500_000;
@@ -19,7 +21,9 @@ describe("urlState", () => {
     const back = decodeParams(encodeParams(p));
     expect(back.channels[0].prices.wPrice).toBe(12.99);
     expect(back.channels[0].route).toBe("APP");
-    expect(back.channels[1].retention.annualRenewal).toBe(33);
+    expect(back.channels[1].retention.annual.rMature).toBe(77);
+    expect(back.channels[0].trials.weekly).toBe(7);
+    expect(back.channels[1].trials.annual).toBe(14);
     expect(back.marketing.paidBudget).toBe(9000);
     expect(back.capital.founderDraw).toBe(2500);
     expect(back.arrGoal).toBe(500_000);

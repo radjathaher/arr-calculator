@@ -110,9 +110,34 @@ function channelAccessors(i: 0 | 1): Acc[] {
       (p, v) => void (c(p).retention.monthly.rMature = v),
     ),
     num(
-      `${x}ar`,
-      (p) => c(p).retention.annualRenewal,
-      (p, v) => void (c(p).retention.annualRenewal = v),
+      `${x}a1`,
+      (p) => c(p).retention.annual.r1,
+      (p, v) => void (c(p).retention.annual.r1 = v),
+    ),
+    num(
+      `${x}a2`,
+      (p) => c(p).retention.annual.r2,
+      (p, v) => void (c(p).retention.annual.r2 = v),
+    ),
+    num(
+      `${x}am`,
+      (p) => c(p).retention.annual.rMature,
+      (p, v) => void (c(p).retention.annual.rMature = v),
+    ),
+    num(
+      `${x}tw`,
+      (p) => c(p).trials.weekly,
+      (p, v) => void (c(p).trials.weekly = v),
+    ),
+    num(
+      `${x}tm`,
+      (p) => c(p).trials.monthly,
+      (p, v) => void (c(p).trials.monthly = v),
+    ),
+    num(
+      `${x}ta`,
+      (p) => c(p).trials.annual,
+      (p, v) => void (c(p).trials.annual = v),
     ),
   ];
 }
@@ -127,11 +152,6 @@ const ACC: Acc[] = [
     "goal",
     (p) => p.arrGoal,
     (p, v) => void (p.arrGoal = v),
-  ),
-  num(
-    "trial",
-    (p) => p.plans.trialDays,
-    (p, v) => void (p.plans.trialDays = v),
   ),
   num(
     "wfee",

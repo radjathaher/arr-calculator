@@ -106,6 +106,42 @@ describe("simulate — per-channel pricing", () => {
   });
 });
 
+describe("simulate — per-plan trial delay", () => {
+  it("a shorter trial reaches the target no later than a longer one", () => {
+    const mk = (trial: number) => {
+      const p = clone();
+      p.marketing.budgetRampPct = 5;
+      for (const ch of p.channels) ch.trials = { weekly: trial, monthly: trial, annual: trial };
+      return simulate(p).sum.d1m;
+    };
+    const short = mk(0);
+    const long = mk(45);
+    expect(short).toBeGreaterThanOrEqual(0);
+    expect(long).toBeGreaterThanOrEqual(0);
+    expect(short).toBeLessThanOrEqual(long);
+  });
+});
+
+describe("simulate — annual step-down", () => {
+  it("a higher mature annual renewal lifts ARR", () => {
+    const base = simulate(clone()).sum.maxARR;
+    const p = clone();
+    for (const ch of p.channels) ch.retention.annual.rMature = 99;
+    expect(simulate(p).sum.maxARR).toBeGreaterThan(base);
+  });
+});
+
+describe("simulate — cash-positive recovery", () => {
+  it("records the day net cash claws back to non-negative after a dip", () => {
+    const p = clone();
+    p.capital.startCash = 100;
+    p.marketing.budgetRampPct = 10;
+    const r = simulate(p);
+    expect(r.sum.minCash).toBeLessThan(0);
+    expect(r.sum.cashPositiveDate).not.toBeNull();
+  });
+});
+
 describe("simulate — valuation", () => {
   it("finite EV and equity = EV + net cash", () => {
     const r = simulate(clone());

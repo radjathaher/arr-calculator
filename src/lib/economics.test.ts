@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { channelEconomics } from "./economics";
+import { blendedEconomics, channelEconomics } from "./economics";
 import { DEFAULT_PARAMS } from "./defaults";
 
 const econ = (i: 0 | 1) =>
@@ -35,5 +35,26 @@ describe("channelEconomics", () => {
 
   it("organic (in-app) has a lower gross margin than paid (web)", () => {
     expect(econ(1).gm).toBeLessThan(econ(0).gm);
+  });
+
+  it("payback weeks are positive and shorter for cheaper-CAC organic", () => {
+    expect(econ(0).paybackWeeks).toBeGreaterThan(0);
+    expect(econ(1).paybackWeeks).toBeLessThan(econ(0).paybackWeeks);
+  });
+});
+
+describe("blendedEconomics", () => {
+  it("blends spend-weighted between the two channels' CAC", () => {
+    const b = blendedEconomics(DEFAULT_PARAMS);
+    expect(b.cac).toBeGreaterThan(econ(1).cac);
+    expect(b.cac).toBeLessThan(econ(0).cac);
+    expect(b.ltvCac).toBeGreaterThan(0);
+    expect(b.paybackWeeks).toBeGreaterThan(0);
+  });
+
+  it("collapses to a single channel when the other has no budget", () => {
+    const p = structuredClone(DEFAULT_PARAMS);
+    p.marketing.organicBudget = 0;
+    expect(blendedEconomics(p).cac).toBeCloseTo(econ(0).cac, 6);
   });
 });

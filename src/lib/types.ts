@@ -24,7 +24,14 @@ export interface ChannelPrices {
 export interface ChannelRetention {
   weekly: StepDown;
   monthly: StepDown;
-  annualRenewal: number; // per-year renewal fraction (percentage)
+  annual: StepDown; // per-year step-down: 1st renewal, 2nd, then flat mature
+}
+
+// Free-trial length in days per plan (0 = charge immediately on conversion).
+export interface PlanTrials {
+  weekly: number;
+  monthly: number;
+  annual: number;
 }
 
 export interface Funnel {
@@ -46,12 +53,9 @@ export interface Channel {
   funnel: Funnel;
   mix: PlanMix;
   prices: ChannelPrices; // per-channel pricing (paid vs organic may differ)
+  trials: PlanTrials; // per-plan free-trial length, days
   retention: ChannelRetention;
   color: string;
-}
-
-export interface Plans {
-  trialDays: number; // global trial length
 }
 
 export interface Routes {
@@ -90,7 +94,6 @@ export interface Valuation {
 export interface Params {
   fx: number; // IDR per USD
   arrGoal: number; // target ARR the model races to (default $1M)
-  plans: Plans;
   routes: Routes;
   capital: Capital;
   marketing: Marketing;
@@ -107,6 +110,26 @@ export interface SeriesPoint {
   arr: number;
 }
 
+// One row of the cash-flow statement. Inflows are split by collection route so
+// the lumpy IAP payouts read distinctly from the smooth web rolling payouts.
+export interface CashFlowRow {
+  i: number; // day index (daily rows) or first-day index (monthly rows)
+  date: Date;
+  label: string; // "Jun 26" (month) or "Jun 7, 26" (day)
+  webIn: number; // web rolling payouts landed this period
+  iapIn: number; // app-store / IAP lump payouts landed this period
+  adSpend: number;
+  infra: number;
+  draw: number; // founder distribution
+  netChange: number; // webIn + iapIn − adSpend − infra − draw
+  endBal: number; // net cash balance at period end
+}
+
+export interface CashFlow {
+  monthly: CashFlowRow[];
+  daily: CashFlowRow[];
+}
+
 export interface SimSummary {
   d1m: number; // first day index ARR >= target (-1 if never)
   d1mDate: Date | null;
@@ -117,6 +140,7 @@ export interface SimSummary {
   peakFunding: number; // external cash needed beyond credit = max(0, −minBal − creditLimit)
   insolventDay: number; // first day net balance < −creditLimit
   insolventDate: Date | null;
+  cashPositiveDate: Date | null; // first day net ≥ 0 after dipping negative (null if never)
   gm: number; // blended gross margin (0..1)
   EV: number; // enterprise value (DCF to today)
   equity: number; // EV + net cash balance
@@ -128,4 +152,5 @@ export interface SimResult {
   lastDay: number; // index of the day the run stopped (target hit, or cap)
   series: SeriesPoint[];
   sum: SimSummary;
+  cashflow: CashFlow;
 }

@@ -1,0 +1,107 @@
+/* Styles for the rewritten funnel block: the rate │ cost ladder, the
+   transposed plan grid, and the scorecard verdict. Warm editorial look,
+   matching the global theme vars. */
+
+/* ---- Funnel ladder: two columns, each rate row aligned to the cost it
+   produces. Left column = editable rates, right = derived cost boxes
+   (only CPM is an input). ---- */
+.funnel-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fc-row {
+  display: grid;
+  grid-template-columns: 1fr 18px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.fc-head .fc-cost-h {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+}
+.fc-rate {
+  display: flex;
+  align-items: flex-end;
+  min-height: 1px;
+}
+.fc-arrow {
+  text-align: center;
+  color: var(--line);
+  font-size: 11px;
+  line-height: 1;
+}
+.fc-cost {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: "IBM Plex Mono";
+  font-size: 11px;
+  color: var(--muted);
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+  min-height: 18px;
+}
+.fc-cost-l {
+  color: var(--muted);
+}
+.fc-cost b {
+  color: var(--teal);
+}
+
+/* ---- Transposed plan grid: label column + weekly · monthly · annual. ---- */
+.plan-grid {
+  display: grid;
+  grid-template-columns: max-content repeat(3, 1fr);
+  gap: 5px 8px;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.pg-corner {
+  min-height: 1px;
+}
+.pg-col-h {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  text-align: center;
+}
+.pg-row-h {
+  font-family: "IBM Plex Sans";
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.plan-grid .ni {
+  align-items: center;
+}
+.plan-grid .ni-in {
+  justify-content: center;
+}
+.pg-ltv {
+  font-family: "IBM Plex Mono";
+  font-size: 11px;
+  color: var(--teal);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ---- Scorecard verdict, read in context below the grid. ---- */
+.fb-score {
+  font-family: "IBM Plex Mono";
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6px 10px;
+}
+.fb-score b {
+  color: var(--ink);
+}

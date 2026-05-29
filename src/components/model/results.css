@@ -1,0 +1,127 @@
+/* Results cards + cash-flow statement — warm editorial paper. */
+
+/* Four headline metric cards. Reuses .big / .big-l / .big-v / .big-s atoms
+   from styles.css; this grid replaces the old three-up .big3 layout. */
+.cards-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 11px;
+}
+@media (max-width: 860px) {
+  .cards-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 460px) {
+  .cards-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* A card can stack several muted sub-lines (verdict headline + ratios). */
+.card-subs {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.card-subs .sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: "IBM Plex Mono";
+  line-height: 1.4;
+}
+.card-subs .sub.lead {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.results-alert {
+  margin-top: 11px;
+}
+
+/* ---- Cash-flow statement ---- */
+.cf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "IBM Plex Mono";
+  font-size: 11.5px;
+}
+.cf-table th,
+.cf-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.cf-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-align: right;
+}
+.cf-table thead th.col-month {
+  text-align: left;
+}
+.cf-table td.num {
+  text-align: right;
+  color: var(--ink);
+}
+.cf-table td.neg {
+  color: var(--danger);
+}
+
+.cf-scroll {
+  max-height: 420px;
+  overflow: auto;
+}
+
+/* Clickable month rows; the open one is tinted and its caret rotates. */
+.cf-row {
+  cursor: pointer;
+}
+.cf-row:hover {
+  background: var(--bg);
+}
+.cf-row.open {
+  background: var(--bg);
+}
+.cf-row .col-month {
+  text-align: left;
+  font-weight: 500;
+}
+.cf-caret {
+  display: inline-block;
+  width: 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* Daily drill-down rows sit indented beneath their month. */
+.cf-day td {
+  font-size: 10.5px;
+  color: var(--muted);
+  border-bottom: 1px dotted var(--line);
+}
+.cf-day td.num {
+  color: var(--muted);
+}
+.cf-day td.neg {
+  color: var(--danger);
+}
+.cf-day .col-month {
+  text-align: left;
+  padding-left: 22px;
+}
+
+.cf-empty {
+  color: var(--muted);
+  font-size: 12px;
+  font-family: "IBM Plex Mono";
+  padding: 6px 2px;
+}

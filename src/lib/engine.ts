@@ -1,5 +1,6 @@
-import type { Channel, Params, SeriesPoint, SimResult, StepDown } from "./types";
+import type { CashFlowRow, Channel, Params, SeriesPoint, SimResult, StepDown } from "./types";
 import { baseCAC } from "./saturation";
+import { dstr } from "./format";
 
 // ---- Calendar -------------------------------------------------------------
 // Day 0 = 1 June 2026 (launch). The model runs until the ARR target is hit,
@@ -60,10 +61,55 @@ export function weeklyLifetime(sd: StepDown, cap = 520): number {
 }
 
 const z = (n: number): Float64Array => new Float64Array(n);
+const DAYMS = 864e5;
+
+// Web checkout pays on a rolling basis: each day's net lands `lag` days later,
+// but a payout that would fall on a weekend rolls to the following Monday (banks
+// don't settle Sat/Sun). Returns, for every earning day, the index it's collected.
+function buildWebPayMap(len: number, lag: number): Int32Array {
+  const map = new Int32Array(len);
+  const l = Math.round(lag);
+  for (let d = 0; d < len; d++) {
+    let t = d + l;
+    const wd = new Date(START.getTime() + t * DAYMS).getDay(); // 0=Sun … 6=Sat
+    if (wd === 6) t += 2;
+    else if (wd === 0) t += 1;
+    map[d] = t;
+  }
+  return map;
+}
+
+// Apple pays the App Store / IAP balance as one monthly LUMP, not a daily
+// trickle: earnings accrue across a whole Apple fiscal month and are paid
+// `lagAfterClose` days after that month closes (Apple's legal max is "within 45
+// days of the fiscal month end"; ~33 days is the observed norm). Apple's fiscal
+// calendar: the year starts the last Sunday of September, every fiscal month
+// ends on a Saturday, and quarters follow a 5-4-4 week pattern (anchor verified
+// against Apple's published 2026 dates: FY2026 began Sun 28 Sep 2025). The rare
+// 53-week fiscal year is not modelled — it drifts late-horizon dates by ≤1 week.
+// Returns, for every earning day, the index its lump is collected (−1 if outside
+// any generated fiscal month).
+function buildIapPayMap(len: number, lagAfterClose: number): Int32Array {
+  const map = new Int32Array(len).fill(-1);
+  const weeks = [5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4]; // weeks per fiscal month
+  const lag = Math.round(lagAfterClose);
+  let cursor = new Date(2025, 8, 28).getTime(); // last Sunday of Sep 2025 = FY26 anchor
+  for (let m = 0; m < 12 * 9; m++) {
+    const w = weeks[m % 12];
+    const startIdx = Math.round((cursor - START.getTime()) / DAYMS);
+    const closeIdx = startIdx + w * 7 - 1; // Saturday close
+    const payIdx = closeIdx + lag;
+    const lo = Math.max(0, startIdx);
+    const hi = Math.min(len - 1, closeIdx);
+    for (let d = lo; d <= hi; d++) map[d] = payIdx;
+    cursor += w * 7 * DAYMS;
+    if (startIdx > len) break;
+  }
+  return map;
+}
 
 // ---- Core simulation ------------------------------------------------------
 export function simulate(p: Params): SimResult {
-  const trialDays = p.plans.trialDays;
   const webFee = p.routes.webFeePct / 100;
   const asLow = p.routes.appFeeLow / 100;
   const asHigh = p.routes.appFeeHigh / 100;
@@ -79,12 +125,19 @@ export function simulate(p: Params): SimResult {
   const billI = z(N + BUF);
   const txW = z(N + BUF);
   const txI = z(N + BUF);
-  const inflow = z(N + BUF);
+  // Cash landing per route, kept separate so the cash-flow statement can show
+  // the smooth web rolling payouts apart from the lumpy monthly IAP payouts.
+  const inflowWeb = z(N + BUF);
+  const inflowIap = z(N + BUF);
+  const webPayIdx = buildWebPayMap(N + BUF, p.routes.webPayoutDays);
+  const iapPayIdx = buildIapPayMap(N + BUF, p.routes.appPayoutDays);
 
   // Daily series used for charts and the DCF.
   const arr = z(N);
   const recRev = z(N);
   const adSpend = z(N);
+  const infraPaidArr = z(N);
+  const drawArr = z(N);
   const deferred = z(N);
   const processorAR = z(N);
   const netArr = z(N); // net cash balance (cash − credit drawn)
@@ -95,7 +148,6 @@ export function simulate(p: Params): SimResult {
   // Schedule a cohort of `n` paid customers acquired by channel `ci` on `day`.
   const sched = (ch: Channel, ci: number, day: number, n: number): void => {
     if (n <= 1e-9) return;
-    const fc = day + trialDays;
     const isWeb = ch.route === "WEB";
     const bill = isWeb ? billW : billI;
     const tx = isWeb ? txW : txI;
@@ -104,7 +156,13 @@ export function simulate(p: Params): SimResult {
     const nM = (n * ch.mix.monthly) / 100;
     const nA = (n * ch.mix.annual) / 100;
 
+    // Each plan's first charge lands after that plan's own free-trial length.
+    // The offset is clamped to ≥1 day: charges must land strictly after the
+    // current day, since the daily loop accumulates active counts at the top of
+    // the tick before `sched` runs at the bottom. A 0-day trial therefore bills
+    // the next day (effectively immediate over a multi-year horizon).
     if (nW > 0) {
+      const fc = day + Math.max(1, ch.trials.weekly);
       for (let k = 0; ; k++) {
         const cd = fc + 7 * k;
         if (cd >= N) break;
@@ -118,6 +176,7 @@ export function simulate(p: Params): SimResult {
       }
     }
     if (nM > 0) {
+      const fc = day + Math.max(1, ch.trials.monthly);
       for (let k = 0; ; k++) {
         const cd = fc + 30 * k;
         if (cd >= N) break;
@@ -131,12 +190,13 @@ export function simulate(p: Params): SimResult {
       }
     }
     if (nA > 0) {
-      const renew = ch.retention.annualRenewal / 100;
+      const fc = day + Math.max(1, ch.trials.annual);
       for (let k = 0; ; k++) {
         const cd = fc + 365 * k;
         if (cd >= N) break;
-        const s = nA * Math.pow(renew, k);
-        if (s < 1e-4) break;
+        const ret = tickRet(ch.retention.annual, k);
+        if (ret < 1e-6) break;
+        const s = nA * ret;
         diffA[ci][cd] += s;
         diffA[ci][cd + 365] -= s;
         bill[cd] += s * pr.aPrice;
@@ -151,6 +211,8 @@ export function simulate(p: Params): SimResult {
   const rM = [0, 0];
   let minBal = Infinity;
   let insolventDay = -1;
+  let wentNegative = false;
+  let cashPositiveDay = -1;
   let feeW = 0;
   let feeI = 0;
   let billCum = 0;
@@ -185,23 +247,29 @@ export function simulate(p: Params): SimResult {
     feeW += billW[d] - Math.max(0, nW);
     feeI += billI[d] - nI;
     netBillCum += Math.max(0, nW) + nI;
-    if (d + p.routes.webPayoutDays < inflow.length)
-      inflow[d + p.routes.webPayoutDays] += Math.max(0, nW);
-    if (d + p.routes.appPayoutDays < inflow.length) inflow[d + p.routes.appPayoutDays] += nI;
+    // Web: rolling, weekend-shifted. IAP: lumped onto its Apple fiscal payout day.
+    const wIdx = webPayIdx[d];
+    if (wIdx < inflowWeb.length) inflowWeb[wIdx] += Math.max(0, nW);
+    const iIdx = iapPayIdx[d];
+    if (iIdx >= 0 && iIdx < inflowIap.length) inflowIap[iIdx] += nI;
     billCum += billW[d] + billI[d];
     recCum += revD;
     deferred[d] = Math.max(0, billCum - recCum);
 
-    // Cash in from payouts.
-    bal += inflow[d];
-    collCum += inflow[d];
+    // Cash in from payouts that land today.
+    const cashIn = inflowWeb[d] + inflowIap[d];
+    bal += cashIn;
+    collCum += cashIn;
     processorAR[d] = Math.max(0, netBillCum - collCum);
 
     // Founder distribution on the first of each month — the only obligation that
     // can pull the balance below −creditLimit (true insolvency). Spending on ads
     // or infra never can, so we record the low-water mark and insolvency here, at
     // the one point in the day where the balance is allowed to dip past the floor.
-    if (DAYS[d].first && p.capital.founderDraw > 0) bal -= p.capital.founderDraw;
+    if (DAYS[d].first && p.capital.founderDraw > 0) {
+      bal -= p.capital.founderDraw;
+      drawArr[d] = p.capital.founderDraw;
+    }
     if (bal < minBal) minBal = bal;
     if (bal < insolventFloor && insolventDay < 0) insolventDay = d;
 
@@ -228,9 +296,14 @@ export function simulate(p: Params): SimResult {
       }
     }
     adSpend[d] = total;
+    infraPaidArr[d] = infraPaid;
     bal -= total + infraPaid;
 
     netArr[d] = bal;
+    // Once the balance has dipped into the red, note the day it first claws back
+    // to non-negative — "drowning in cash, no longer touching the credit line".
+    if (bal < 0) wentNegative = true;
+    else if (wentNegative && cashPositiveDay < 0) cashPositiveDay = d;
     if (arrD >= p.arrGoal) {
       d1m = d;
       break; // reached the target — stop the clock here
@@ -274,9 +347,62 @@ export function simulate(p: Params): SimResult {
   const equity = EV + endCash;
   const evMultiple = horizonARR > 0 ? EV / horizonARR : 0;
 
+  // ---- Cash-flow statement (daily + calendar-monthly rollup) ----
+  const daily: CashFlowRow[] = [];
+  const monthly: CashFlowRow[] = [];
+  let curMonth: CashFlowRow | null = null;
+  let curKey = "";
+  for (let d = 0; d <= lastDay; d++) {
+    const date = DAYS[d].date;
+    const wIn = inflowWeb[d];
+    const iIn = inflowIap[d];
+    const sp = adSpend[d];
+    const inf = infraPaidArr[d];
+    const dr = drawArr[d];
+    daily.push({
+      i: d,
+      date,
+      label: dstr(date),
+      webIn: wIn,
+      iapIn: iIn,
+      adSpend: sp,
+      infra: inf,
+      draw: dr,
+      netChange: wIn + iIn - sp - inf - dr,
+      endBal: netArr[d],
+    });
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    if (key !== curKey) {
+      curMonth = {
+        i: d,
+        date: new Date(date.getFullYear(), date.getMonth(), 1),
+        label: date.toLocaleString("en-US", { month: "short", year: "2-digit" }),
+        webIn: 0,
+        iapIn: 0,
+        adSpend: 0,
+        infra: 0,
+        draw: 0,
+        netChange: 0,
+        endBal: 0,
+      };
+      monthly.push(curMonth);
+      curKey = key;
+    }
+    if (curMonth) {
+      curMonth.webIn += wIn;
+      curMonth.iapIn += iIn;
+      curMonth.adSpend += sp;
+      curMonth.infra += inf;
+      curMonth.draw += dr;
+      curMonth.endBal = netArr[d];
+    }
+  }
+  for (const m of monthly) m.netChange = m.webIn + m.iapIn - m.adSpend - m.infra - m.draw;
+
   return {
     lastDay,
     series,
+    cashflow: { monthly, daily },
     sum: {
       d1m,
       d1mDate: d1m >= 0 ? DAYS[d1m].date : null,
@@ -287,6 +413,7 @@ export function simulate(p: Params): SimResult {
       peakFunding: Math.max(0, -minBal - limit),
       insolventDay,
       insolventDate: insolventDay >= 0 ? DAYS[insolventDay].date : null,
+      cashPositiveDate: cashPositiveDay >= 0 ? DAYS[cashPositiveDay].date : null,
       gm,
       EV,
       equity,

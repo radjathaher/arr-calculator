@@ -14,6 +14,21 @@ import type { Currency } from "../../lib/format";
 import { dstr, money } from "../../lib/format";
 import { DAYS, NDAYS } from "../../lib/engine";
 
+// Round a magnitude up to a clean bound: 1, 2, 2.5, or 5 times a power of ten.
+function niceCeil(v: number): number {
+  if (v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const base = 10 ** exp;
+  const frac = v / base;
+  const step = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 2.5 ? 2.5 : frac <= 5 ? 5 : 10;
+  return step * base;
+}
+
+// A clean tick step that yields roughly four to six intervals across the span.
+function niceStep(span: number): number {
+  return niceCeil(span / 5) || 1;
+}
+
 // One net-balance line: cash minus credit drawn. Green above zero (real cash),
 // red below (on credit), with a dashed floor at −credit limit = insolvent below.
 export function CashChart({
@@ -36,15 +51,23 @@ export function CashChart({
     return out;
   }, []);
 
-  const { yMax, yMin, zeroOff } = useMemo(() => {
+  const { yMax, yMin, yTicks, zeroOff } = useMemo(() => {
     let hi = 0;
     let lo = -creditLimit;
     for (const s of sim.series) {
       if (s.net > hi) hi = s.net;
       if (s.net < lo) lo = s.net;
     }
-    const span = hi - lo || 1;
-    return { yMax: hi, yMin: lo, zeroOff: hi / span };
+    // Round each side out to a clean bound and derive evenly-spaced ticks that
+    // always land on zero, so the baseline and tick labels read cleanly.
+    const hiN = niceCeil(hi);
+    const loN = -niceCeil(-lo);
+    const step = niceStep(hiN - loN);
+    const out: number[] = [];
+    for (let v = 0; v <= hiN + 1; v += step) out.push(Math.round(v));
+    for (let v = -step; v >= loN - 1; v -= step) out.unshift(Math.round(v));
+    const span = hiN - loN || 1;
+    return { yMax: hiN, yMin: loN, yTicks: out, zeroOff: hiN / span };
   }, [sim, creditLimit]);
 
   return (
@@ -73,6 +96,7 @@ export function CashChart({
           />
           <YAxis
             domain={[yMin, yMax]}
+            ticks={yTicks}
             tickFormatter={(v: number) => money(v, cur, fx)}
             tick={{ fontSize: 10, fill: "var(--muted)" }}
             width={48}
