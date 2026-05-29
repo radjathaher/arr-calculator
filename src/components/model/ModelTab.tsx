@@ -21,7 +21,6 @@ export function ModelTab() {
       : decodeParams(window.location.search.replace(/^\?/, "")),
   );
   const [cur, setCur] = useState<Currency>("USD");
-  const [full, setFull] = useState(false);
 
   const upd = (mut: (p: Params) => void) =>
     setParams((prev) => {
@@ -39,11 +38,12 @@ export function ModelTab() {
   }, [params]);
 
   const fx = params.fx;
+  const goal = params.arrGoal;
 
   return (
     <div className="model">
       <div className="topbar">
-        <div className="lblmono">Jun 2026 → Dec 2030 · {full ? "full model" : "founder view"}</div>
+        <div className="lblmono">Move the dials — watch when you hit your ARR goal</div>
         <div className="topbar-actions">
           <div className="seg">
             {(["USD", "IDR"] as Currency[]).map((c) => (
@@ -52,26 +52,19 @@ export function ModelTab() {
               </button>
             ))}
           </div>
-          <button className="mini-btn" onClick={() => setFull((f) => !f)}>
-            {full ? "Hide full model ▴" : "Full model ▾"}
-          </button>
         </div>
       </div>
 
       <Cockpit params={params} upd={upd} sim={sim} st={st} cur={cur} fx={fx} />
 
-      <ArrChart sim={sim} cur={cur} fx={fx} />
+      <ArrChart sim={sim} goal={goal} cur={cur} fx={fx} />
 
-      {full && (
-        <>
-          <MetricsStrip st={st} cur={cur} fx={fx} />
-          <Charts sim={sim} st={st} cur={cur} fx={fx} />
-          <Statements st={st} cur={cur} fx={fx} />
-          <DcfPanel st={st} cur={cur} fx={fx} />
-          <Schedule sim={sim} cur={cur} fx={fx} />
-          <Assumptions params={params} upd={upd} cur={cur} fx={fx} />
-        </>
-      )}
+      <MetricsStrip st={st} cur={cur} fx={fx} />
+      <Charts sim={sim} st={st} goal={goal} cur={cur} fx={fx} />
+      <Statements st={st} cur={cur} fx={fx} />
+      <DcfPanel st={st} cur={cur} fx={fx} />
+      <Schedule sim={sim} cur={cur} fx={fx} />
+      <Assumptions params={params} upd={upd} cur={cur} fx={fx} />
     </div>
   );
 }

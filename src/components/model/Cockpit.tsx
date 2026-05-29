@@ -5,8 +5,9 @@ import { dstr, money } from "../../lib/format";
 import { T } from "../../lib/defaults";
 import { Big, NI } from "../atoms";
 
-// The founder cockpit: the only decisions that matter on the left, and what they
-// produce on the right. Everything else is a default behind "Full model".
+// The founder cockpit: the decisions that matter on the left, and what they
+// produce on the right (when you hit your ARR goal). The full statement model
+// follows below.
 export function Cockpit({
   params,
   upd,
@@ -75,6 +76,13 @@ export function Cockpit({
           width={96}
           onChange={(v) => upd((q) => (q.capital.creditLimit = v))}
         />
+        <NI
+          label="ARR goal — the target you're racing to"
+          value={p.arrGoal}
+          step={250000}
+          width={120}
+          onChange={(v) => upd((q) => (q.arrGoal = v))}
+        />
         <div className="cockpit-hint">
           Flat spend plateaus (new sign-ups just replace churn). Grow spend each month to break
           through — but too fast and you outrun your cash.
@@ -85,19 +93,21 @@ export function Cockpit({
         <div className={`verdict ${reached ? "ok" : "warn"}`}>
           {reached ? (
             <>
-              <span className="verdict-big">$1M ARR · {dstr(sm.d1mDate)}</span>
+              <span className="verdict-big">
+                {fxC(p.arrGoal)} ARR · {dstr(sm.d1mDate)}
+              </span>
               <span className="verdict-sub">{months} months in</span>
             </>
           ) : (
             <>
-              <span className="verdict-big">$1M ARR not reached</span>
-              <span className="verdict-sub">by Dec 2030 — raise spend or growth %</span>
+              <span className="verdict-big">{fxC(p.arrGoal)} ARR not reached</span>
+              <span className="verdict-sub">raise spend or growth % — or lower the goal</span>
             </>
           )}
         </div>
         <div className="big3">
           <Big
-            label="ARR (Dec 2030)"
+            label="ARR (end of plan)"
             value={fxC(sm.endARR)}
             tone={T.teal}
             sub={`MRR ${fxC(sm.endARR / 12)}`}

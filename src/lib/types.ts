@@ -91,6 +91,7 @@ export interface Valuation {
 
 export interface Params {
   fx: number; // IDR per USD
+  arrGoal: number; // target ARR the model races to (default $1M)
   plans: Plans;
   routes: Routes;
   capital: Capital;

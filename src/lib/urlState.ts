@@ -130,6 +130,11 @@ const ACC: Acc[] = [
     (p, v) => void (p.fx = v),
   ),
   num(
+    "goal",
+    (p) => p.arrGoal,
+    (p, v) => void (p.arrGoal = v),
+  ),
+  num(
     "pw",
     (p) => p.plans.wPrice,
     (p, v) => void (p.plans.wPrice = v),

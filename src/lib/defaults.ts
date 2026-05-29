@@ -52,6 +52,7 @@ const ORGANIC: Channel = {
 
 export const DEFAULT_PARAMS: Params = {
   fx: FX_DEFAULT,
+  arrGoal: 1_000_000,
   plans: { wPrice: 9.99, mPrice: 19.99, aPrice: 69.99, trialDays: 3 },
   routes: {
     webFeePct: 6,

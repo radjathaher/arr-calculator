@@ -11,7 +11,7 @@ export function App() {
       <header className="hdr">
         <div>
           <h1>Cash &amp; ARR Studio</h1>
-          <p>A subscription app, from $0 to a three-statement model · Jun 2026 → Dec 2030</p>
+          <p>A subscription app, from $0 to a three-statement model and a valuation</p>
         </div>
       </header>
       <nav className="pillnav">

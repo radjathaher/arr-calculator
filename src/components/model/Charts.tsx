@@ -58,11 +58,13 @@ function DailyTip({
 export function Charts({
   sim,
   st,
+  goal,
   cur,
   fx,
 }: {
   sim: SimResult;
   st: Statements;
+  goal: number;
   cur: Currency;
   fx: number;
 }) {
@@ -143,7 +145,7 @@ export function Charts({
       </div>
 
       <div className="card">
-        <h3>ARR &rarr; $1M</h3>
+        <h3>ARR &rarr; {money(goal, cur, fx)}</h3>
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={sim.series} margin={{ top: 6, right: 8, left: 2, bottom: 2 }}>
             <CartesianGrid stroke="var(--line)" vertical={false} />
@@ -156,11 +158,16 @@ export function Charts({
             <YAxis tickFormatter={fmtY} tick={{ fontSize: 9, fill: "var(--muted)" }} width={44} />
             <Tooltip content={<DailyTip cur={cur} fx={fx} />} />
             <ReferenceLine
-              y={1e6}
+              y={goal}
               stroke="var(--gold)"
               strokeWidth={1.3}
               strokeDasharray="5 4"
-              label={{ value: "$1M", fill: "var(--gold)", fontSize: 9, position: "insideTopRight" }}
+              label={{
+                value: money(goal, cur, fx),
+                fill: "var(--gold)",
+                fontSize: 9,
+                position: "insideTopRight",
+              }}
             />
             <Line
               type="monotone"

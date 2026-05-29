@@ -15,7 +15,17 @@ import { dstr, money } from "../../lib/format";
 import { DAYS, NDAYS } from "../../lib/engine";
 
 // The single headline chart for the minimal cockpit view: ARR climbing toward $1M.
-export function ArrChart({ sim, cur, fx }: { sim: SimResult; cur: Currency; fx: number }) {
+export function ArrChart({
+  sim,
+  goal,
+  cur,
+  fx,
+}: {
+  sim: SimResult;
+  goal: number;
+  cur: Currency;
+  fx: number;
+}) {
   const ticks = useMemo(() => {
     const out: number[] = [];
     for (let i = 0; i < NDAYS; i++) {
@@ -27,7 +37,7 @@ export function ArrChart({ sim, cur, fx }: { sim: SimResult; cur: Currency; fx: 
 
   return (
     <div className="card">
-      <h3>ARR &rarr; $1M</h3>
+      <h3>ARR &rarr; {money(goal, cur, fx)}</h3>
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={sim.series} margin={{ top: 6, right: 10, left: 4, bottom: 2 }}>
           <CartesianGrid stroke="var(--line)" vertical={false} />
@@ -51,11 +61,16 @@ export function ArrChart({ sim, cur, fx }: { sim: SimResult; cur: Currency; fx: 
             formatter={(v: number) => [money(v, cur, fx), "ARR"]}
           />
           <ReferenceLine
-            y={1e6}
+            y={goal}
             stroke="var(--gold)"
             strokeWidth={1.4}
             strokeDasharray="5 4"
-            label={{ value: "$1M", fill: "var(--gold)", fontSize: 10, position: "insideTopRight" }}
+            label={{
+              value: money(goal, cur, fx),
+              fill: "var(--gold)",
+              fontSize: 10,
+              position: "insideTopRight",
+            }}
           />
           <Line
             type="monotone"

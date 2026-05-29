@@ -303,7 +303,7 @@ export function simulate(p: Params): SimResult {
     if (card > peakCard) peakCard = card;
     if (cash < minCash) minCash = cash;
     if (cash < -1e-6 && insolventDay < 0) insolventDay = d;
-    if (arr[d] >= 1e6 && d1m < 0) d1m = d;
+    if (arr[d] >= p.arrGoal && d1m < 0) d1m = d;
   }
 
   // ---- Blended unit economics ----
