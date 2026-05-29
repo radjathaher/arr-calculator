@@ -263,7 +263,7 @@ export function encodeParams(p: Params): string {
   for (const a of ACC) {
     if (a.kind === "num") {
       const v = a.get(p);
-      if (v !== a.get(DEFAULT_PARAMS)) sp.set(a.k, String(v));
+      if (v !== a.get(DEFAULT_PARAMS) && Number.isFinite(v)) sp.set(a.k, String(v));
     } else {
       const v = a.get(p);
       if (v !== a.get(DEFAULT_PARAMS)) sp.set(a.k, v);
@@ -286,4 +286,10 @@ export function decodeParams(qs: string): Params {
     }
   }
   return p;
+}
+
+// True if any numeric input is blank (NaN). The model pauses (shows "—") rather
+// than computing on incomplete inputs.
+export function hasBlankInputs(p: Params): boolean {
+  return ACC.some((a) => a.kind === "num" && Number.isNaN(a.get(p)));
 }

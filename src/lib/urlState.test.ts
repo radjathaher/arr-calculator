@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeParams, encodeParams } from "./urlState";
+import { decodeParams, encodeParams, hasBlankInputs } from "./urlState";
 import { DEFAULT_PARAMS } from "./defaults";
 
 describe("urlState", () => {
@@ -40,9 +40,18 @@ describe("urlState", () => {
     expect(back.capital.creditLimit).toBe(50000);
   });
 
-  it("only includes changed keys", () => {
+  it("only includes changed keys, and never serialises a blank (NaN)", () => {
     const p = structuredClone(DEFAULT_PARAMS);
     p.marketing.budgetRampPct = 10;
     expect(encodeParams(p)).toBe("ramp=10");
+    p.capital.startCash = Number.NaN;
+    expect(encodeParams(p)).toBe("ramp=10"); // NaN skipped
+  });
+
+  it("hasBlankInputs flags a blank numeric field", () => {
+    expect(hasBlankInputs(DEFAULT_PARAMS)).toBe(false);
+    const p = structuredClone(DEFAULT_PARAMS);
+    p.marketing.paidBudget = Number.NaN;
+    expect(hasBlankInputs(p)).toBe(true);
   });
 });

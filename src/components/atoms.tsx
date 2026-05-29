@@ -1,8 +1,8 @@
 import { type ReactNode, useEffect, useState } from "react";
 
-// Numeric field backed by a local text buffer so the user can type freely
-// (no HTML5 step/validation rejecting values like 600, no stuck leading zero).
-// Commits a parsed number on every keystroke; normalises the display on blur.
+// Numeric field backed by a local text buffer so the user can type freely.
+// A blank field commits NaN (not 0) and stays visually empty — the model treats
+// any blank input as "incomplete" and pauses rather than computing on a zero.
 export function NI({
   label,
   value,
@@ -17,11 +17,12 @@ export function NI({
   width?: number;
   suffix?: string;
 }) {
-  const [text, setText] = useState(() => String(value));
+  const [text, setText] = useState(() => (Number.isFinite(value) ? String(value) : ""));
 
-  // Resync when the value changes from outside (URL load, currency, etc.).
+  // Resync when a finite value changes from outside (URL load, etc.). Leave the
+  // field alone while it holds a blank (NaN) the user just cleared.
   useEffect(() => {
-    if (Number.parseFloat(text) !== value) setText(String(value));
+    if (Number.isFinite(value) && Number.parseFloat(text) !== value) setText(String(value));
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -37,13 +38,13 @@ export function NI({
             const raw = e.target.value;
             setText(raw);
             if (raw === "" || raw === "-" || raw === ".") {
-              onChange(0);
+              onChange(Number.NaN);
               return;
             }
             const n = Number.parseFloat(raw);
-            if (Number.isFinite(n)) onChange(n);
+            onChange(Number.isFinite(n) ? n : Number.NaN);
           }}
-          onBlur={() => setText(String(value))}
+          onBlur={() => setText(Number.isFinite(value) ? String(value) : "")}
           style={{ width }}
         />
         {suffix && <i>{suffix}</i>}

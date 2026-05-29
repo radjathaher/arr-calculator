@@ -1,10 +1,11 @@
-import type { Channel, DailyBlocks, Params, SeriesPoint, SimResult, StepDown } from "./types";
+import type { Channel, Params, SeriesPoint, SimResult, StepDown } from "./types";
 import { baseCAC, customersFromSpend } from "./saturation";
 
 // ---- Calendar -------------------------------------------------------------
-// Fixed horizon: day 0 = 1 June 2026 (launch) -> 31 December 2030.
+// Day 0 = 1 June 2026 (launch). The model runs until the ARR target is hit,
+// with a 5-year safety cap.
 export const START = new Date(2026, 5, 1);
-export const HORIZON_END = new Date(2030, 11, 31);
+export const MAXDAYS = 1826; // 5-year cap
 const BUF = 400; // slack for forward-scheduled billings / payout lags
 
 interface DayInfo {
@@ -15,10 +16,8 @@ interface DayInfo {
 
 export const DAYS: DayInfo[] = (() => {
   const out: DayInfo[] = [];
-  const endMs = HORIZON_END.getTime();
-  for (let i = 0; ; i++) {
+  for (let i = 0; i < MAXDAYS; i++) {
     const d = new Date(START.getTime() + i * 864e5);
-    if (d.getTime() > endMs) break;
     out.push({
       date: d,
       mi: (d.getFullYear() - 2026) * 12 + d.getMonth() - 5,
@@ -29,21 +28,9 @@ export const DAYS: DayInfo[] = (() => {
 })();
 
 export const NDAYS = DAYS.length;
-export const NMONTHS = DAYS[NDAYS - 1].mi + 1; // 55
+const NMONTHS = DAYS[NDAYS - 1].mi + 1;
 
-// Calendar month labels, e.g. "Jun '26".
-export const MONTH_LABELS: string[] = (() => {
-  const out: string[] = [];
-  for (let m = 0; m < NMONTHS; m++) {
-    const d = new Date(2026, 5 + m, 1);
-    out.push(
-      d.toLocaleString("en-US", { month: "short" }) + " '" + String(d.getFullYear()).slice(2),
-    );
-  }
-  return out;
-})();
-
-// Days per calendar month within the horizon.
+// Days per calendar month within the horizon (used by the budget ramp).
 export const DAYS_IN_MONTH: number[] = (() => {
   const out = Array.from({ length: NMONTHS }, () => 0);
   for (const d of DAYS) out[d.mi]++;
@@ -93,18 +80,14 @@ export function simulate(p: Params): SimResult {
   const txI = z(N + BUF);
   const inflow = z(N + BUF);
 
-  // Daily building blocks (exposed for the statements layer).
+  // Daily series used for charts and the DCF.
   const arr = z(N);
   const recRev = z(N);
   const adSpend = z(N);
-  const feesDay = z(N);
-  const infraDay = z(N);
-  const billingsDay = z(N);
   const deferred = z(N);
   const processorAR = z(N);
   const cardDebt = z(N);
   const cashArr = z(N);
-  const distribution = z(N);
 
   const base = p.channels.map(baseCAC);
   const chSpend = [0, 0];
@@ -202,18 +185,14 @@ export function simulate(p: Params): SimResult {
     const rev = rW * (wPrice / 7) + rA * (aPrice / 365) + rM * (mPrice / 30);
     recRev[d] = rev;
     const infD = rev * infra;
-    infraDay[d] = infD;
     const asFee = arr[d] >= 1e6 ? asHigh : asLow;
 
     const nW = billW[d] * (1 - webFee) - p.routes.webFixed * txW[d];
     const nI = billI[d] * (1 - asFee);
-    const dayFees = billW[d] - Math.max(0, nW) + (billI[d] - nI);
-    feesDay[d] = dayFees;
     feeW += billW[d] - Math.max(0, nW);
     feeI += billI[d] - nI;
     webVol += billW[d];
     iapVol += billI[d];
-    billingsDay[d] = billW[d] + billI[d];
     netBillCum += Math.max(0, nW) + nI;
     if (d + p.routes.webPayoutDays < inflow.length)
       inflow[d + p.routes.webPayoutDays] += Math.max(0, nW);
@@ -237,10 +216,7 @@ export function simulate(p: Params): SimResult {
     // Founder distribution on the first of each month (flat).
     if (DAYS[d].first) {
       const draw = p.capital.founderDraw;
-      if (draw > 0) {
-        cash -= draw;
-        distribution[d] = draw;
-      }
+      if (draw > 0) cash -= draw;
     }
 
     // Auto-paydown: clear the card toward zero whenever cash sits above reserve.
@@ -311,8 +287,12 @@ export function simulate(p: Params): SimResult {
     if (card > peakCard) peakCard = card;
     if (cash < minCash) minCash = cash;
     if (cash < -1e-6 && insolventDay < 0) insolventDay = d;
-    if (arr[d] >= p.arrGoal && d1m < 0) d1m = d;
+    if (arr[d] >= p.arrGoal) {
+      d1m = d;
+      break; // reached the target — stop the clock here
+    }
   }
+  const lastDay = d1m >= 0 ? d1m : N - 1;
 
   // ---- Blended unit economics ----
   const totFees = feeW + feeI;
@@ -350,36 +330,46 @@ export function simulate(p: Params): SimResult {
     totVol > 0 ? (webVol * p.routes.webPayoutDays + iapVol * p.routes.appPayoutDays) / totVol : 0;
 
   let maxARR = 0;
-  for (let d = 0; d < N; d++) if (arr[d] > maxARR) maxARR = arr[d];
+  for (let d = 0; d <= lastDay; d++) if (arr[d] > maxARR) maxARR = arr[d];
 
   const series: SeriesPoint[] = [];
-  for (let d = 0; d < N; d++)
+  for (let d = 0; d <= lastDay; d++)
     series.push({ i: d, cash: cashArr[d], card: -cardDebt[d], arr: arr[d] });
 
-  const daily: DailyBlocks = {
-    arr,
-    recRev,
-    adSpend,
-    fees: feesDay,
-    infra: infraDay,
-    billings: billingsDay,
-    deferred,
-    processorAR,
-    cardDebt,
-    cash: cashArr,
-    distribution,
-  };
+  // ---- DCF / enterprise value (over the run to the target) ----
+  const wacc = (p.valuation.rfRate + p.valuation.beta * p.valuation.erp) / 100;
+  const gTerm = p.valuation.termGrowth / 100;
+  const tax = p.valuation.taxRate / 100;
+  let pv = 0;
+  let prevRecv = 0;
+  let prevDef = 0;
+  for (let d = 0; d <= lastDay; d++) {
+    const ebit = recRev[d] * gm - adSpend[d];
+    const nopat = ebit - (ebit > 0 ? tax * ebit : 0);
+    const dRecv = processorAR[d] - prevRecv;
+    const dDef = deferred[d] - prevDef;
+    prevRecv = processorAR[d];
+    prevDef = deferred[d];
+    pv += (nopat - dRecv + dDef) / Math.pow(1 + wacc, d / 365);
+  }
+  const horizonARR = d1m >= 0 ? arr[d1m] : maxARR;
+  const termFCF = horizonARR * gm * (1 - tax);
+  const tv = wacc > gTerm ? (termFCF * (1 + gTerm)) / (wacc - gTerm) : termFCF * 40;
+  const pvTV = tv / Math.pow(1 + wacc, lastDay / 365);
+  const EV = pv + pvTV;
+  const endCash = cashArr[lastDay];
+  const equity = EV - cardDebt[lastDay] + endCash;
+  const evMultiple = horizonARR > 0 ? EV / horizonARR : 0;
 
   return {
-    days: N,
-    daily,
+    lastDay,
     series,
     sum: {
       d1m,
       d1mDate: d1m >= 0 ? DAYS[d1m].date : null,
-      endARR: arr[N - 1],
+      endARR: arr[lastDay],
       maxARR,
-      endCash: cashArr[N - 1],
+      endCash,
       minCash,
       peakFunding: Math.max(0, -minCash),
       insolventDay,
@@ -402,6 +392,10 @@ export function simulate(p: Params): SimResult {
       iapVol,
       billCum,
       blendedFeeRate,
+      EV,
+      equity,
+      evMultiple,
+      wacc: wacc * 100,
       perCh: p.channels.map((c, i) => ({
         name: c.name,
         color: c.color,

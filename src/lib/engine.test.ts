@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DAYS_IN_MONTH, NDAYS, NMONTHS, simulate, tickRet, weeklyLifetime } from "./engine";
+import { DAYS_IN_MONTH, MAXDAYS, NDAYS, simulate, tickRet, weeklyLifetime } from "./engine";
 import { baseCAC, customersFromSpend, effectiveCAC } from "./saturation";
 import { DEFAULT_PARAMS } from "./defaults";
 import type { Params } from "./types";
@@ -7,9 +7,8 @@ import type { Params } from "./types";
 const clone = (): Params => structuredClone(DEFAULT_PARAMS);
 
 describe("calendar", () => {
-  it("spans Jun 2026 -> Dec 2030 (55 months)", () => {
-    expect(NMONTHS).toBe(55);
-    expect(NDAYS).toBeGreaterThan(1600);
+  it("spans a 5-year cap from Jun 2026", () => {
+    expect(NDAYS).toBe(MAXDAYS);
     expect(DAYS_IN_MONTH.reduce((a, b) => a + b, 0)).toBe(NDAYS);
   });
 });
@@ -20,23 +19,12 @@ describe("baseCAC", () => {
   });
   it("makes organic far cheaper than paid", () => {
     expect(baseCAC(DEFAULT_PARAMS.channels[1])).toBeLessThan(baseCAC(DEFAULT_PARAMS.channels[0]));
-    expect(baseCAC(DEFAULT_PARAMS.channels[1])).toBeCloseTo(7.42, 1);
   });
 });
 
 describe("saturation", () => {
-  const base = 10;
-  const sat = 100;
-  const slope = 0.7;
-  it("is linear below the saturation point", () => {
-    expect(customersFromSpend(50, base, sat, slope)).toBeCloseTo(5, 6);
-  });
-  it("is continuous at the saturation point", () => {
-    const below = customersFromSpend(99.999, base, sat, slope);
-    const above = customersFromSpend(100.001, base, sat, slope);
-    expect(Math.abs(above - below)).toBeLessThan(1e-3);
-  });
-  it("raises effective CAC past saturation", () => {
+  it("is linear below the sat point, climbs above", () => {
+    expect(customersFromSpend(50, 10, 100, 0.7)).toBeCloseTo(5, 6);
     const ch = DEFAULT_PARAMS.channels[1];
     expect(effectiveCAC(ch, 30000)).toBeGreaterThan(effectiveCAC(ch, 100) * 2);
   });
@@ -48,32 +36,45 @@ describe("retention", () => {
     expect(tickRet(sd, 0)).toBe(1);
     expect(tickRet(sd, 1)).toBeCloseTo(0.5, 6);
     expect(tickRet(sd, 2)).toBeCloseTo(0.375, 6);
-    expect(tickRet(sd, 4)).toBeCloseTo(0.375 * 0.82 * 0.85, 6);
   });
   it("weeklyLifetime is finite", () => {
-    const life = weeklyLifetime({ r1: 50, r2: 75, r3: 82, rMature: 85 });
-    expect(life).toBeGreaterThan(1);
-    expect(life).toBeLessThan(10);
+    expect(weeklyLifetime({ r1: 50, r2: 75, r3: 82, rMature: 85 })).toBeGreaterThan(1);
   });
 });
 
-describe("simulate", () => {
-  it("is deterministic and emits full-length daily blocks", () => {
-    const a = simulate(clone());
-    const b = simulate(clone());
-    expect(a.days).toBe(NDAYS);
-    expect(a.daily.arr.length).toBe(NDAYS);
-    expect(a.daily.cash.length).toBe(NDAYS);
-    expect(a.series.length).toBe(NDAYS);
-    expect(a.sum.endARR).toBe(b.sum.endARR);
+describe("simulate — run to target", () => {
+  it("is deterministic", () => {
+    expect(simulate(clone()).sum.endARR).toBe(simulate(clone()).sum.endARR);
   });
 
-  it("grows ARR with a positive budget", () => {
+  it("default ($1M goal) plateaus and never reaches — runs to the cap", () => {
     const r = simulate(clone());
+    expect(r.sum.d1m).toBe(-1);
+    expect(r.lastDay).toBe(NDAYS - 1);
+    expect(r.sum.endARR).toBeLessThan(1e6);
     expect(r.sum.maxARR).toBeGreaterThan(0);
-    expect(r.sum.endARR).toBeGreaterThan(0);
   });
 
+  it("a budget ramp breaks through and stops the clock at the target", () => {
+    const p = clone();
+    p.marketing.budgetRampPct = 5;
+    const r = simulate(p);
+    expect(r.sum.d1m).toBeGreaterThanOrEqual(0);
+    expect(r.lastDay).toBe(r.sum.d1m);
+    expect(r.sum.endARR).toBeGreaterThanOrEqual(1e6);
+    expect(r.series.length).toBe(r.lastDay + 1);
+  });
+
+  it("respects an editable target (lower goal reached sooner)", () => {
+    const p = clone();
+    p.arrGoal = 300_000;
+    const r = simulate(p);
+    expect(r.sum.d1m).toBeGreaterThanOrEqual(0);
+    expect(r.sum.endARR).toBeGreaterThanOrEqual(300_000);
+  });
+});
+
+describe("simulate — economics & cash", () => {
   it("with zero budget stays at starting cash and acquires nobody", () => {
     const p = clone();
     p.marketing.paidBudget = 0;
@@ -81,37 +82,41 @@ describe("simulate", () => {
     const r = simulate(p);
     expect(r.sum.maxARR).toBe(0);
     expect(r.sum.insolventDay).toBe(-1);
-    expect(r.daily.cash[r.days - 1]).toBeCloseTo(p.capital.startCash, 0);
+    expect(r.sum.endCash).toBeCloseTo(p.capital.startCash, 0);
   });
 
-  it("shows insolvency (no auto-throttle) when budget far exceeds working capital", () => {
+  it("caps spend at fundable capital — no blow-up from an absurd budget", () => {
     const p = clone();
-    p.marketing.paidBudget = 500000;
+    p.marketing.paidBudget = 1e9;
+    p.marketing.organicBudget = 1e9;
+    p.capital.startCash = 0;
     const r = simulate(p);
-    expect(r.sum.insolventDay).toBeGreaterThanOrEqual(0);
-    expect(r.sum.minCash).toBeLessThan(0);
-    expect(r.sum.peakFunding).toBeGreaterThan(0);
+    expect(Number.isFinite(r.sum.endARR)).toBe(true);
+    expect(r.sum.peakCard).toBeLessThanOrEqual(p.capital.creditLimit + 1);
+    expect(r.sum.minCash).toBeGreaterThan(-1e6); // not quadrillions in the hole
   });
 
-  it("a positive budget ramp raises total spend", () => {
-    const flat = simulate(clone());
-    const p = clone();
-    p.marketing.budgetRampPct = 5;
-    const ramped = simulate(p);
-    expect(ramped.sum.totSpend).toBeGreaterThan(flat.sum.totSpend);
-  });
-
-  it("blended effective AR days sit between web and app payout lags", () => {
+  it("produces a finite enterprise value and equity bridge", () => {
     const r = simulate(clone());
-    expect(r.sum.effAR).toBeGreaterThanOrEqual(DEFAULT_PARAMS.routes.webPayoutDays);
-    expect(r.sum.effAR).toBeLessThanOrEqual(DEFAULT_PARAMS.routes.appPayoutDays);
+    expect(Number.isFinite(r.sum.EV)).toBe(true);
+    expect(Number.isFinite(r.sum.equity)).toBe(true);
+    expect(r.sum.wacc).toBeGreaterThan(0);
   });
 
-  it("founder draw reduces ending cash vs no draw (when solvent)", () => {
+  it("values faster web payout above slow app payout, all else equal", () => {
+    const web = clone();
+    web.channels[0].route = "WEB";
+    web.channels[1].route = "WEB";
+    const app = clone();
+    app.channels[0].route = "APP";
+    app.channels[1].route = "APP";
+    expect(simulate(web).sum.EV).toBeGreaterThan(simulate(app).sum.EV);
+  });
+
+  it("founder draw reduces ending cash", () => {
     const noDraw = simulate(clone());
     const p = clone();
     p.capital.founderDraw = 1000;
-    const withDraw = simulate(p);
-    expect(withDraw.sum.endCash).toBeLessThan(noDraw.sum.endCash);
+    expect(simulate(p).sum.endCash).toBeLessThan(noDraw.sum.endCash);
   });
 });

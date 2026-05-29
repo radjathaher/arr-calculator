@@ -1,271 +1,102 @@
-import { TwoTimeline } from "./TwoTimeline";
 import { ChurnBucket, Flywheel, FunnelCalc, PayoutTrap } from "./widgets";
 
-// The Explainer tab: a warm, second-person teaching piece that bootstraps a
-// total layperson into thinking like a subscription-app finance modeler. It
-// uses the app's real default numbers and ends by handing the reader to the
-// Model tab. Everything visual lives in CSS classes already defined in
-// styles.css; only the prose lives here.
-
+// A short field guide to the model: two ways to buy growth, the leaky bucket,
+// the cash gap, and the three dials you actually set to race to an ARR target.
 export function ExplainerTab() {
   return (
     <div className="zine">
-      <header className="z-hero">
-        <div className="z-kicker">A field guide to surviving your own app</div>
-        <h1>You shipped an app. Now what?</h1>
+      <div className="z-hero">
+        <div className="z-kicker">A field guide</div>
+        <h1>
+          You shipped an app.
+          <br />
+          Now what?
+        </h1>
         <p className="z-sub">
-          You launch. You pray for users. <i>Nobody comes.</i> This is the story of the next
-          eighteen months — told in <span className="mono">dollars</span>,{" "}
-          <span className="mono">days</span>, and the gap between them — and how a{" "}
-          <span className="mono">$20k</span> credit line either kills you or makes you.
+          Months of work, you launch, and revenue is <span className="mono">$0</span>. Growth is a
+          machine: it buys attention, turns it into paying subscribers, and recycles the cash faster
+          than it burns. Here are the few dials that decide whether it reaches{" "}
+          <span className="mono">$1M ARR</span> — and when.
         </p>
-      </header>
+      </div>
 
-      <article className="z-body">
+      <div className="z-body">
         <p className="z-lead">
-          You built a subscription app. People can pay you <b>$9.99 a week</b>,{" "}
-          <b>$19.99 a month</b>, or <b>$69.99 a year</b>. Three buttons. The whole rest of this
-          guide is about a single, stubborn truth:{" "}
-          <i>earning money and having money are not the same thing</i>. Master that gap and you can
-          out-grow companies ten times your size. Ignore it and you go broke while technically
-          profitable.
+          Everything below reduces to three decisions:{" "}
+          <b>how much to spend on paid ads vs organic</b>, <b>how fast to grow that spend</b>, and{" "}
+          <b>how much to pay yourself</b>. The rest is the machinery that turns those into ARR,
+          cash, and a valuation.
         </p>
 
-        {/* ---------------- ACT I ---------------- */}
-        <span className="act-tag first">Act I</span>
-        <h2>Buy a stranger</h2>
+        <span className="act-tag first">01 · Two ways to buy a stranger</span>
+        <h2>Paid ads vs. organic</h2>
         <p>
-          No one installs an app they have never heard of. So you buy attention — you pay to put
-          your app in front of strangers and hope a few of them care. This is the funnel, and it
-          leaks at every step.
+          <b>Paid ads</b> land ready-to-buy users, but the CPM is brutal — every install costs real
+          money. The upside: you route them through your own <b>web checkout</b>, so the fee is
+          small (~6%) and the cash comes back in about <b>10 days</b>.
         </p>
         <p>
-          Money buys <b>impressions</b> (eyeballs). A sliver of those <b>install</b>. A sliver of
-          those start a <b>trial</b>. A sliver of <i>those</i> become a <b>paying customer</b>. By
-          the time a real subscriber falls out the bottom, you have spent on hundreds of people who
-          did not. That total spend, divided by the one who stayed, is your <b>CAC</b> — customer
-          acquisition cost. Drag the sliders and watch it move.
+          <b>Organic / UGC</b> — paying creators to post — is dirt-cheap to reach (a $0.13 install
+          is real), but it converts worse and bills through the <i>app store</i>: a{" "}
+          <b>15–30% cut</b> and a <b>~60-day</b> payout. Cheap to acquire, expensive and slow to
+          collect.
         </p>
-
+        <p>Money in ÷ paying customers out = your CAC. Drag the funnel and watch it move:</p>
         <FunnelCalc />
+        <aside className="sidenote">
+          The whole paid-vs-organic choice is a trade between <b>cost</b> (organic wins) and{" "}
+          <b>cash speed + margin</b> (paid wins). The model prices both so you can see which gets
+          you to the target without going broke.
+        </aside>
 
-        <h3>Two kinds of stranger</h3>
+        <span className="act-tag">02 · The leaky bucket</span>
+        <h2>Keep them, or run to stand still</h2>
         <p>
-          Not all strangers cost the same. <b>Paid-ads</b> customers are expensive — you are bidding
-          against everyone else for ready-to-buy people — but the algorithm finds buyers who skew
-          toward the <b>annual</b> plan and stick around longer. <b>Organic / UGC</b> customers are
-          almost free (a homemade video can deliver an install for about{" "}
-          <span className="mono">$0.20</span>), but they convert worse, churn faster, and — as we
-          will see — pay you through the <i>slow</i> door.
+          Every week some subscribers cancel. Pour in faster than it leaks and you grow; otherwise
+          you plateau — new sign-ups just replace the ones churning out. The hole is widest at the
+          very top: about half of weekly users vanish after the first charge.
         </p>
-
-        <TwoTimeline stage="funnel" />
-
-        <p className="sidenote">
-          The cheapest customer is not the best customer, and the best customer is not the cheapest.
-          Most real businesses run a blend of both.
-        </p>
-
-        <p>
-          Either way, Act I ends with you in the red. You just{" "}
-          <b>spent money you don&apos;t have back yet</b>. To get it back, the stranger has to stay.
-        </p>
-
-        {/* ---------------- ACT II ---------------- */}
-        <span className="act-tag">Act II</span>
-        <h2>Keep them (or don&apos;t)</h2>
-        <p>
-          A new subscriber does not pay you on day one. There is a <b>3-day trial</b> first — a
-          deliberate delay where they try the app for free and you have earned exactly nothing. Only
-          when the trial ends does the first real charge land.
-        </p>
-        <p>
-          From there, the <i>shape</i> of the money depends on which button they pressed.{" "}
-          <b>Weekly</b> is a trickle — $9.99 at a time, again and again, if they keep coming back.{" "}
-          <b>Annual</b> is a tide — $69.99 all at once, a year of commitment in a single payment. A
-          monthly plan sits in between. More upfront cash is safer for you; smaller commitments are
-          easier for them to start.
-        </p>
-
-        <TwoTimeline stage="retention" />
-
-        <h3>The leaky bucket</h3>
-        <p>
-          Every week, some subscribers quietly cancel. That is <b>churn</b>, and it is the silent
-          killer of subscription apps. Picture a bucket: you pour new customers in the top, and
-          churn drains the old ones out the bottom.{" "}
-          <i>Roughly half of weekly users are gone after the first week.</i> The bucket only fills
-          if you pour in faster than it leaks.
-        </p>
-
         <ChurnBucket />
 
+        <span className="act-tag">03 · The cash gap</span>
+        <h2>Earned ≠ in the bank</h2>
         <p>
-          Now you can see why CAC alone never tells the whole story. A customer who pays $9.99 once
-          is a loss; a customer who pays it forty times is a gold mine. The hopeful version of the
-          truth: a customer is worth <b>more than they cost — eventually</b>. The dangerous word is{" "}
-          <i>eventually</i>.
+          You pay for ads <i>today</i>. Web money lands in ~10 days; app-store money in ~60. Spend
+          now, collect much later, with bills stacking in between — that gap is where good apps die.
+          Your credit line is the bridge; used too hard, the bill beats the money.
         </p>
-
-        {/* ---------------- ACT III ---------------- */}
-        <span className="act-tag">Act III</span>
-        <h2>Survive the gap</h2>
-        <p>
-          Here is where most founders get blindsided. When a customer pays, the money does{" "}
-          <b>not</b> appear in your bank account. The payment processor holds it, takes a cut, and
-          pays you out later — sometimes <i>much</i> later.{" "}
-          <b>Earned revenue is not cash in the bank.</b>
-        </p>
-        <p>
-          How much later depends on the door they paid through. <b>Web checkout</b> pays out in
-          about <span className="mono">10 days</span>. The <b>app store</b> makes you wait roughly{" "}
-          <span className="mono">60 days</span>. That is two full months between a customer&apos;s
-          charge and your ability to spend it.
-        </p>
-
-        <TwoTimeline stage="cash" />
-
-        <p>
-          Watch what that does to your bank balance when you are spending on ads every single day
-          but only collecting on a lag. Flip between the two payout speeds:
-        </p>
-
         <PayoutTrap />
 
-        <h3>The credit card as a time machine</h3>
+        <span className="act-tag">04 · The three dials</span>
+        <h2>Race to your target</h2>
         <p>
-          This is what the <b>$20k credit line</b> is really for. It is not free money — it is a{" "}
-          <i>time machine</i>. It lets you spend tomorrow&apos;s payout today, bridging the trough
-          until the store finally pays you. Used well, it lets a tiny company punch far above its
-          weight. Used carelessly, it runs dry mid-trough and the whole thing stops.
+          So the decision is: split spend between paid and organic, set how fast it{" "}
+          <b>grows each month</b>, and how much you <b>draw</b> out. Flat spend plateaus; growth
+          compounds — but grow too fast and you outrun your cash. The model runs until you hit your
+          ARR goal and tells you the date, the cash, and what the company is worth.
         </p>
-
-        <h3>The flywheel</h3>
-        <p>
-          And there is a reward hiding in the speed. The faster your cash comes back, the faster you
-          can pour it into the <i>next</i> batch of ads, which brings the next customers, whose cash
-          comes back and buys the batch after that. A flywheel. The quicker the payout, the faster
-          it spins.
-        </p>
-
         <Flywheel />
 
-        <p>
-          So the lesson of Act III is brutal and simple:{" "}
-          <b>the speed of cash is the speed of growth</b>. Two identical businesses, same prices,
-          same churn — the one that gets paid faster wins.
-        </p>
-
-        {/* ---------------- ACT IV ---------------- */}
-        <span className="act-tag">Act IV</span>
-        <h2>What you built</h2>
-        <p>
-          Step back. If every paying customer is a recurring stream, then all of them together form
-          one big stream. Multiply your current monthly recurring revenue by twelve and you get{" "}
-          <b>ARR</b> — annual recurring revenue. It is the headline number everyone in this world
-          watches: the run-rate of the whole machine.
-        </p>
-        <p>
-          The famous milestone is <b>$1M ARR</b> — the first finish line that says the business is
-          real. But it comes with a sting. Below $1M, the app store takes a <b>15%</b> cut. Cross
-          $1M and that fee jumps to <b>30%</b>. The moment you start winning, the house doubles its
-          take — one more reason the cheap-but-slow app-store route can quietly tax your growth.
-        </p>
-
-        <h3>What is it all worth?</h3>
-        <p>
-          Finally, the big one: <b>enterprise value</b> — what the whole company is worth, today.
-          The tool for this is a <b>DCF</b>, a discounted cash flow, and it sounds scarier than it
-          is.
-        </p>
-        <p>
-          Here is the whole idea in plain words. A dollar you will earn <i>next year</i> is worth a
-          little less than a dollar in your hand <i>right now</i> — because you could have used
-          today&apos;s dollar in the meantime, and because the future is uncertain. So you take
-          every dollar the business will ever earn, <b>pull each one back to today</b> (shrinking
-          the far-off ones the most), and add them all up. That sum is what the company is worth
-          now.
-        </p>
-
-        <TwoTimeline stage="value" />
-
-        <p>
-          And notice the punchline that ties the whole guide together:{" "}
-          <b>faster cash is worth more</b>. Money that arrives sooner gets shrunk less on its way
-          back to today — so the same revenue, collected faster, produces a more valuable company.
-          The cash gap from Act III is not just a survival problem; it is a <i>valuation</i>{" "}
-          problem.
-        </p>
-        <p>
-          Which leaves one irresistible question: <b>how big can you get on a $20k credit line?</b>{" "}
-          How much ARR — how much enterprise value — can you squeeze out of a single, recycling pool
-          of bridge cash?
-        </p>
-
-        {/* ---------------- ACT V ---------------- */}
-        <span className="act-tag">Act V</span>
-        <h2>How it all becomes a financial statement</h2>
-        <p>
-          Everything so far — every stranger bought, every weekly charge, every slow app-store
-          payout — is just <i>cash and timing</i>. Accountants have a tidy way to file all of it,
-          and it is the same three pages every real company reports.
-        </p>
-        <p>
-          The <b>income statement</b> asks: did you make a profit? It counts revenue when you{" "}
-          <i>earn</i> it — a year of an annual plan is recognised one month at a time — subtracts
-          the fees and infra it cost, then the ad spend, and what is left is your margin.
-        </p>
-        <p>
-          The <b>balance sheet</b> is a snapshot of what you own and owe on a given day: cash in the
-          bank, money the app store still owes you, the year of service you were paid for but have
-          not yet delivered (<i>deferred revenue</i>), and the credit-card balance financing it all.
-          The two sides always tie out.
-        </p>
-        <p>
-          The <b>cash flow statement</b> is the honest one. Profit is an opinion; cash is a fact. It
-          starts from profit and walks back to the money that actually moved — adding back the
-          annual cash you collected early, subtracting the receivables stuck at the app store, and
-          your own draw at the end. Its bottom line is the cash balance you watched rise and fall.
-        </p>
-        <p>
-          And the <b>valuation</b> is just that cash flow read into the future and pulled back to
-          today: every month of free cash flow from now to 2030, discounted because a dollar later
-          is worth less than a dollar now, plus a terminal value for everything after — summed into
-          one number for what the whole machine is worth. The cohorts you met in Act I flow,
-          automatically, into all four.
-        </p>
-
-        {/* ---------------- CLOSING ---------------- */}
-        <span className="act-tag">The five gears</span>
-        <h2>Now go turn them</h2>
-        <p>
-          Everything above reduces to five dials you actually control. The Model tab lets you turn
-          each one and watch the whole machine respond:
-        </p>
         <ol className="z-moves">
           <li>
-            <b>Acquisition</b> — how cheaply you buy strangers, and the blend of paid vs. organic.
+            <b>Cheaper customers.</b> Everything compounds off CAC.
           </li>
           <li>
-            <b>Pricing &amp; mix</b> — how many choose weekly trickle vs. annual tide.
+            <b>Faster cash.</b> Web (10d) beats app store (60d) — speed is free growth.
           </li>
           <li>
-            <b>Retention</b> — how slowly the bucket leaks.
+            <b>Keep them past week one.</b> The biggest lever on lifetime value.
           </li>
           <li>
-            <b>Cash speed</b> — web vs. app store, and how hard your credit line works.
-          </li>
-          <li>
-            <b>Reinvestment</b> — how fast the flywheel recycles every returning dollar.
+            <b>Grow spend — but stay solvent.</b> The whole game in one line.
           </li>
         </ol>
+
         <p className="z-end">
-          You came in praying for users. You leave knowing the real game is <b>dollars and days</b>.
-          Open the <b>Model</b> tab, set your two dials — how much you spend and how much you draw —
-          and watch the statements move as a single stranger, bought on borrowed time, compounds
-          into a company.
+          That's the machine. Open the <b>Model</b> tab, set the dials, and watch when you hit your
+          target.
         </p>
-      </article>
+      </div>
     </div>
   );
 }

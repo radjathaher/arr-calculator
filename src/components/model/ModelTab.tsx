@@ -2,16 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { Params } from "../../lib/types";
 import type { Currency } from "../../lib/format";
 import { simulate } from "../../lib/engine";
-import { buildStatements } from "../../lib/statements";
 import { DEFAULT_PARAMS } from "../../lib/defaults";
-import { decodeParams, encodeParams } from "../../lib/urlState";
+import { decodeParams, encodeParams, hasBlankInputs } from "../../lib/urlState";
 import { Cockpit } from "./Cockpit";
 import { ArrChart } from "./ArrChart";
-import { MetricsStrip } from "./MetricsStrip";
-import { Charts } from "./Charts";
-import { Statements } from "./Statements";
-import { DcfPanel } from "./DcfPanel";
-import { Schedule } from "./Schedule";
+import { CashChart } from "./CashChart";
 import { Assumptions } from "./Assumptions";
 
 export function ModelTab() {
@@ -29,8 +24,8 @@ export function ModelTab() {
       return n;
     });
 
-  const sim = useMemo(() => simulate(params), [params]);
-  const st = useMemo(() => buildStatements(sim, params), [sim, params]);
+  // Pause the calculation while any input is blank.
+  const sim = useMemo(() => (hasBlankInputs(params) ? null : simulate(params)), [params]);
 
   useEffect(() => {
     const qs = encodeParams(params);
@@ -38,7 +33,6 @@ export function ModelTab() {
   }, [params]);
 
   const fx = params.fx;
-  const goal = params.arrGoal;
 
   return (
     <div className="model">
@@ -55,15 +49,15 @@ export function ModelTab() {
         </div>
       </div>
 
-      <Cockpit params={params} upd={upd} sim={sim} st={st} cur={cur} fx={fx} />
+      <Cockpit params={params} upd={upd} sim={sim} cur={cur} fx={fx} />
 
-      <ArrChart sim={sim} goal={goal} cur={cur} fx={fx} />
+      {sim && (
+        <>
+          <ArrChart sim={sim} goal={params.arrGoal} cur={cur} fx={fx} />
+          <CashChart sim={sim} cur={cur} fx={fx} />
+        </>
+      )}
 
-      <MetricsStrip st={st} cur={cur} fx={fx} />
-      <Charts sim={sim} st={st} goal={goal} cur={cur} fx={fx} />
-      <Statements st={st} cur={cur} fx={fx} />
-      <DcfPanel st={st} cur={cur} fx={fx} />
-      <Schedule sim={sim} cur={cur} fx={fx} />
       <Assumptions params={params} upd={upd} cur={cur} fx={fx} />
     </div>
   );

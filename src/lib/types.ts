@@ -119,22 +119,6 @@ export interface ChannelResult {
   cac: number;
 }
 
-// Daily building-block series (length = number of simulated days). These are the
-// raw materials the statements layer buckets into months.
-export interface DailyBlocks {
-  arr: Float64Array; // annual run-rate at end of day
-  recRev: Float64Array; // recognised revenue that day
-  adSpend: Float64Array; // marketing spend that day
-  fees: Float64Array; // payment/platform fees incurred that day (cash basis)
-  infra: Float64Array; // infra cost that day (% of recognised rev)
-  billings: Float64Array; // gross billings that day
-  deferred: Float64Array; // deferred-revenue balance, end of day
-  processorAR: Float64Array; // processor receivable balance, end of day
-  cardDebt: Float64Array; // card/credit balance, end of day
-  cash: Float64Array; // cash balance, end of day
-  distribution: Float64Array; // founder distribution that day
-}
-
 export interface SimSummary {
   d1m: number; // first day index ARR >= $1M (-1 if never)
   d1mDate: Date | null;
@@ -163,12 +147,15 @@ export interface SimSummary {
   iapVol: number;
   billCum: number;
   blendedFeeRate: number;
+  EV: number; // enterprise value (DCF to today)
+  equity: number; // EV − card debt + cash
+  evMultiple: number; // EV / horizon ARR
+  wacc: number; // % discount rate
   perCh: ChannelResult[];
 }
 
 export interface SimResult {
-  days: number; // number of simulated days
-  daily: DailyBlocks;
+  lastDay: number; // index of the day the run stopped (target hit, or cap)
   series: SeriesPoint[];
   sum: SimSummary;
 }
