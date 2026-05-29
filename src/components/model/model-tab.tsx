@@ -9,15 +9,21 @@ import { Results } from "./results";
 import { ArrChart } from "./arr-chart";
 import { CashChart } from "./cash-chart";
 import { Statements } from "./statements";
+import { Cohorts } from "./cohorts";
 import { FunnelBlock } from "./funnel-block";
 import { Assumptions } from "./assumptions";
 
+const initial: Params =
+  typeof window === "undefined"
+    ? DEFAULT_PARAMS
+    : decodeParams(window.location.search.replace(/^\?/, ""));
+
 export function ModelTab() {
-  const [params, setParams] = useState<Params>(() =>
-    typeof window === "undefined"
-      ? DEFAULT_PARAMS
-      : decodeParams(window.location.search.replace(/^\?/, "")),
-  );
+  const [params, setParams] = useState<Params>(initial);
+  // The committed snapshot drives the simulation. Live edits to `params` only
+  // flow into `committed` when the user clicks Recalculate, so the model never
+  // recomputes mid-keystroke.
+  const [committed, setCommitted] = useState<Params>(initial);
   const [cur, setCur] = useState<Currency>("USD");
 
   const upd = (mut: (p: Params) => void) =>
@@ -27,7 +33,11 @@ export function ModelTab() {
       return n;
     });
 
-  const sim = useMemo(() => (hasBlankInputs(params) ? null : simulate(params)), [params]);
+  const sim = useMemo(() => (hasBlankInputs(committed) ? null : simulate(committed)), [committed]);
+
+  // Edits diverge from the committed snapshot until the next recalc.
+  const stale = JSON.stringify(params) !== JSON.stringify(committed);
+  const blank = hasBlankInputs(params);
 
   useEffect(() => {
     const qs = encodeParams(params);
@@ -41,6 +51,18 @@ export function ModelTab() {
       <div className="topbar">
         <div className="lblmono">Compare the two funnels — watch when you hit your ARR goal</div>
         <div className="topbar-actions">
+          {(stale || blank) && (
+            <span className="recalc-stale">
+              {blank ? "fill every field" : "inputs changed — recalculate"}
+            </span>
+          )}
+          <button
+            className="recalc"
+            disabled={!stale || blank}
+            onClick={() => setCommitted(structuredClone(params))}
+          >
+            ⟳ Recalculate
+          </button>
           <div className="seg">
             {(["USD", "IDR"] as Currency[]).map((c) => (
               <button key={c} className={cur === c ? "on" : ""} onClick={() => setCur(c)}>
@@ -60,6 +82,7 @@ export function ModelTab() {
 
       <Results sim={sim} goal={params.arrGoal} params={params} cur={cur} fx={fx} />
 
+      <div className="strip-cap">KEY ASSUMPTIONS</div>
       <div className="card plan-strip">
         <NI
           label="ARR goal"
@@ -67,6 +90,46 @@ export function ModelTab() {
           width={104}
           onChange={(v) => upd((q) => (q.arrGoal = v))}
         />
+        <NI
+          label="Infra %"
+          value={params.unit.infraPct}
+          width={48}
+          suffix="%"
+          onChange={(v) => upd((q) => (q.unit.infraPct = v))}
+        />
+        <NI
+          label="web fixed $/txn"
+          value={params.routes.webFixed}
+          width={50}
+          onChange={(v) => upd((q) => (q.routes.webFixed = v))}
+        />
+        <NI
+          label="app fee SBP %"
+          value={params.routes.appFeeLow}
+          width={48}
+          suffix="%"
+          onChange={(v) => upd((q) => (q.routes.appFeeLow = v))}
+        />
+        <NI
+          label="app fee std %"
+          value={params.routes.appFeeHigh}
+          width={48}
+          suffix="%"
+          onChange={(v) => upd((q) => (q.routes.appFeeHigh = v))}
+        />
+        <NI
+          label="IDR per USD"
+          value={params.fx}
+          width={70}
+          onChange={(v) => upd((q) => (q.fx = v))}
+        />
+        <span className="lblmono">
+          app fee auto-steps SBP→standard at $1M trailing app-store proceeds
+        </span>
+      </div>
+
+      <div className="strip-cap">SPEND &amp; CAPITAL</div>
+      <div className="card plan-strip">
         <NI
           label="paid $/day"
           value={params.marketing.paidDaily}
@@ -114,6 +177,7 @@ export function ModelTab() {
       {sim && (
         <div className="controls">
           <Statements sim={sim} cur={cur} fx={fx} />
+          <Cohorts sim={sim} cur={cur} fx={fx} />
         </div>
       )}
 

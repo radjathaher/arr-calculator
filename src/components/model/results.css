@@ -182,3 +182,29 @@
 .cf-table td.num.tie-ok {
   color: var(--green);
 }
+
+/* ---- Acquisition cohorts ---- */
+/* The first row of each time-slice carries the slice label with extra weight;
+   continuation rows leave it blank, so grouped slices read at a glance. */
+.cf-table td.col-month.coh-slice {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Footer total: the summed CBCV across every displayed cohort row. */
+.coh-total td {
+  position: sticky;
+  bottom: 0;
+  background: var(--panel);
+  font-weight: 600;
+  border-top: 1.5px solid var(--line);
+  border-bottom: none;
+}
+.coh-total td.col-month {
+  color: var(--gold);
+  text-align: right;
+  font-style: italic;
+}
+.coh-total td.num.strong {
+  color: var(--gold);
+}

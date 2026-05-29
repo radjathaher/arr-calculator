@@ -165,6 +165,29 @@ export interface BalanceRow {
   check: number; // totalAssets − totalLiabilities − totalEquity (≈ 0)
 }
 
+// One cohort = customers acquired in a time-slice, through a channel, on a plan
+// (the plan drives the retention curve). CBCV = present value of the cohort's
+// future contribution margin, discounted to today.
+export interface CohortRow {
+  i: number; // first acquisition-day index of the slice
+  date: Date;
+  label: string; // "Jun 26" / "wk Jun 7, 26" / "2026"
+  channel: string; // channel name
+  plan: PlanKind; // weekly | monthly | annual
+  customers: number; // customers acquired in this slice/channel/plan
+  cac: number; // acquisition cost per customer (channel CAC)
+  infra: number; // infra cost attributed over the cohort's life
+  ltv: number; // lifetime value per customer (contribution, gm-adjusted)
+  cbcv: number; // customer-based value of the cohort = discounted PV of contribution
+}
+
+export interface CohortTable {
+  daily: CohortRow[];
+  weekly: CohortRow[];
+  monthly: CohortRow[];
+  annual: CohortRow[];
+}
+
 export interface IncomeStatement {
   monthly: IncomeRow[];
   annual: IncomeRow[];
@@ -202,4 +225,5 @@ export interface SimResult {
     income: IncomeStatement;
     balance: BalanceSheet;
   };
+  cohorts: CohortTable;
 }

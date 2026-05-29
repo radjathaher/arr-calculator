@@ -132,41 +132,42 @@ export function ExplainerTab() {
       <header className="expl-hero">
         <div className="expl-kicker">A field guide · $0 → $1M ARR</div>
         <h1>
-          I just shipped.
+          You just shipped.
           <br />
           What's next?
         </h1>
         <p className="expl-sub">
-          I'm a solo dev. The app is live, the code is clean, and revenue is <code>$0</code>. From
-          here I have exactly two moves: sit and <i>pray</i> users wander in, or go <b>acquire</b>{" "}
-          them — organically for cheap and slow, or by spending on paid ads for fast and pricey. This
-          guide walks the whole thing end to end: one customer's life from the ad they scroll past to
-          their last renewal, and the cash I spend to win them as it crawls back to my bank — the
-          journey from <code>$0</code> to <code>$1M ARR</code>.
+          You shipped a subscription app. The app is live, the code is clean, and revenue is{" "}
+          <code>$0</code>. From here you have exactly two moves: sit and <i>pray</i> users wander in,
+          or go <b>acquire</b> them — organically for cheap and slow, or by spending on paid ads for
+          fast and pricey. This guide walks the whole thing end to end: follow your customer from the
+          ad they scroll past to their last renewal, and your cash from the spend today until it
+          lands in the bank and funds the next ad — the journey from <code>$0</code> to{" "}
+          <code>$1M ARR</code>.
         </p>
       </header>
 
       <Concept tag="01 · The choice" title="Pray, or acquire">
         <p>
           Praying is free and it feels safe, but it is not a plan. Acquiring is a decision: you point
-          money or effort at strangers and convert a fraction of them into paying customers. The two
-          channels behave very differently, and the rest of this guide is about what happens after
-          you choose.
+          money or effort at strangers and convert a fraction of them into your paying customers. The
+          two channels behave very differently, and the rest of this guide is about what happens
+          after you choose.
         </p>
         <PrayVsAcquire />
       </Concept>
 
       <Concept tag="02 · Customer lifecycle" title="From a stranger to a mature subscriber">
         <p>
-          Follow one person all the way through. They see the ad, install, start a 3-day trial, get
-          charged for the first time, then face <b>renewal 1</b> — the brutal cliff where roughly{" "}
-          <b>half</b> of weekly subscribers fall off. Survive that and the curve flattens: renewal 2,
-          then a long tail of mature renewals (or, eventually, churn). Add it all up and this one
-          customer is worth about <code>{num(LTV)}</code> — their <b>blended LTV</b>.
+          Follow one of your customers all the way through. They see your ad, install, start a 3-day
+          trial, get charged for the first time, then face <b>renewal 1</b> — the brutal cliff where
+          roughly <b>half</b> of weekly subscribers fall off. Survive that and the curve flattens:
+          renewal 2, then a long tail of mature renewals (or, eventually, churn). Add it all up and
+          this one customer is worth about <code>{num(LTV)}</code> — their <b>blended LTV</b>.
         </p>
         <CustomerTimeline />
         <p className="expl-cap">
-          One customer's life on a real-day axis. Each charge is{" "}
+          One of your customers' lives on a real-day axis. Each charge is{" "}
           <code>{num(WEEKLY)}</code>; the cliff at renewal 1 is the single biggest lever on lifetime
           value.
         </p>
@@ -175,9 +176,10 @@ export function ExplainerTab() {
       <Concept tag="03 · Cash lifecycle" title="The money leaves now and comes back later">
         <p>
           Here is the part that quietly kills indie apps: the cash and the customer are not on the
-          same clock. I pay for the ad <i>today</i>, so my balance drops by <code>−{num(CAC)}</code>{" "}
-          the instant I buy attention. The customer's first charge happens days later — and even then
-          the money is not mine yet. It sits with the processor, then lands after a lag:
+          same clock. You pay for the ad <i>today</i>, so your balance drops by{" "}
+          <code>−{num(CAC)}</code> the instant you buy attention. The customer's first charge happens
+          days later — and even then the money is not yours yet. It sits with the processor, then
+          lands after a lag:
         </p>
         <ul className="expl-list">
           <li>
@@ -192,15 +194,16 @@ export function ExplainerTab() {
         </ul>
         <CashGap />
         <p className="expl-cap">
-          The gap between when cash leaves (left) and when it returns (right) is the runway you have
-          to survive on. Faster cash = the wheel spins more times per year on the same credit line.
+          The gap between when your cash leaves (left) and when it returns (right) is the runway you
+          have to survive on. Faster cash = the wheel spins more times per year on the same credit
+          line.
         </p>
       </Concept>
 
       <Concept tag="04 · The loop" title="Retain and reinvest your way to $1M ARR">
         <p>
           Once enough payouts land to clear a customer's <code>−{num(CAC)}</code> hole, the surplus
-          funds the <b>next</b> ad. That is the flywheel:
+          funds your <b>next</b> ad. That is the flywheel:
         </p>
         <pre className="expl-code expl-ascii" aria-label="the growth flywheel">
           {`   acquire ──▶ convert ──▶ retain ──▶ collect ──▶ reinvest
@@ -208,11 +211,11 @@ export function ExplainerTab() {
       └──────────────────────────────────────────────────┘`}
         </pre>
         <p>
-          Reach <code>$1M ARR</code> by keeping this loop net-positive: <b>retain</b> customers
-          longer than they churn and <b>reinvest</b> the returning cash faster than you burn it.
-          Every renewal you save and every day you shave off the payout lag lets the wheel spin
-          again sooner. That is the whole game — the formulas below are just this loop, written out
-          precisely.
+          You reach <code>$1M ARR</code> by keeping this loop net-positive: <b>retain</b> your
+          customers longer than they churn and <b>reinvest</b> the returning cash faster than you
+          burn it. Every renewal you save and every day you shave off the payout lag lets your wheel
+          spin again sooner. That is the whole game — the formulas below are just this loop, written
+          out precisely.
         </p>
       </Concept>
 

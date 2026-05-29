@@ -10,6 +10,7 @@ import type { DailyLedger } from "./statements/dailyLedger";
 import { buildIncomeStatement } from "./statements/incomeStatement";
 import { buildBalanceSheet } from "./statements/balanceSheet";
 import { rollupCashFlow } from "./statements/rollups";
+import { buildCohorts } from "./cohorts/buildCohorts";
 
 const BUF = 400; // slack for forward-scheduled billings / payout lags
 const z = (n: number): Float64Array => new Float64Array(n);
@@ -44,6 +45,8 @@ export function simulate(p: Params): SimResult {
   const adSpend = z(N);
   const infraPaidArr = z(N);
   const feeDayArr = z(N); // platform fees taken this day (web + IAP)
+  const iapNetArr = z(N); // net IAP proceeds per day (for the SBP trailing window)
+  const acq = [z(N), z(N)]; // customers acquired per channel per day (cohorts)
   const drawArr = z(N);
   const deferred = z(N);
   const processorAR = z(N);
@@ -126,6 +129,7 @@ export function simulate(p: Params): SimResult {
   let recCum = 0;
   let netBillCum = 0;
   let collCum = 0;
+  let trailingIapNet = 0; // rolling 365-day sum of net IAP proceeds (Apple SBP)
   let d1m = -1;
 
   const limit = p.capital.creditLimit;
@@ -147,10 +151,17 @@ export function simulate(p: Params): SimResult {
     arr[d] = arrD;
     recRev[d] = revD;
     const infD = revD * infra;
-    const asFee = arrD >= 1e6 ? asHigh : asLow;
+    // Apple Small Business Program: 15% (appFeeLow) while trailing-12-month
+    // app-store proceeds are ≤ $1M, 30% (appFeeHigh) once they exceed. Decided
+    // from PAST proceeds (the rolling window excludes today) so there's no
+    // circularity between the rate and the proceeds it's applied to.
+    if (d >= 365) trailingIapNet -= iapNetArr[d - 365];
+    const asFee = trailingIapNet > 1e6 ? asHigh : asLow;
 
     const nW = billW[d] * (1 - webFee) - p.routes.webFixed * txW[d];
     const nI = billI[d] * (1 - asFee);
+    iapNetArr[d] = nI;
+    trailingIapNet += nI;
     const feeWd = billW[d] - Math.max(0, nW);
     const feeId = billI[d] - nI;
     feeW += feeWd;
@@ -202,7 +213,9 @@ export function simulate(p: Params): SimResult {
     for (let c = 0; c < 2; c++) {
       if (sp[c] > 0 && base[c] > 0) {
         total += sp[c];
-        sched(p.channels[c], c, d, sp[c] / base[c]);
+        const cust = sp[c] / base[c];
+        acq[c][d] = cust;
+        sched(p.channels[c], c, d, cust);
       }
     }
     adSpend[d] = total;
@@ -304,12 +317,14 @@ export function simulate(p: Params): SimResult {
   };
   const income = buildIncomeStatement(ledger);
   const balance = buildBalanceSheet(ledger, income);
+  const cohorts = buildCohorts(p, acq, lastDay, waccVal);
 
   return {
     lastDay,
     series,
     cashflow,
     statements: { income, balance },
+    cohorts,
     sum: {
       d1m,
       d1mDate: d1m >= 0 ? DAYS[d1m].date : null,

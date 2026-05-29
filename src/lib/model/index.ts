@@ -14,3 +14,5 @@ export { buildIncomeStatement } from "./statements/incomeStatement";
 export { buildBalanceSheet } from "./statements/balanceSheet";
 export { rollupCashFlow } from "./statements/rollups";
 export type { DailyLedger } from "./statements/dailyLedger";
+export { discountedLifetime } from "./retention/discountedLifetime";
+export { buildCohorts } from "./cohorts/buildCohorts";

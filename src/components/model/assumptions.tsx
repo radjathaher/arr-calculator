@@ -14,21 +14,10 @@ export function Assumptions({ params, upd }: { params: Params; upd: Upd }) {
   return (
     <div className="controls">
       <Sec
-        title="Advanced — valuation, fees, currency"
+        title="Advanced — valuation (DCF / WACC)"
         open={open}
         onToggle={() => setOpen((o) => !o)}
       >
-        <div className="subhead">product &amp; infra</div>
-        <div className="ni-row">
-          <NI
-            label="Infra % of revenue"
-            value={p.unit.infraPct}
-            width={48}
-            suffix="%"
-            onChange={(v) => upd((q) => (q.unit.infraPct = v))}
-          />
-        </div>
-
         <div className="subhead">valuation (DCF / WACC)</div>
         <div className="ni-row">
           <NI
@@ -66,29 +55,6 @@ export function Assumptions({ params, upd }: { params: Params; upd: Upd }) {
             onChange={(v) => upd((q) => (q.valuation.termGrowth = v))}
           />
           <span className="lblmono">WACC {wacc.toFixed(2)}%</span>
-        </div>
-
-        <div className="subhead">fees &amp; currency</div>
-        <div className="ni-row">
-          <NI
-            label="web fixed $/txn"
-            value={p.routes.webFixed}
-            width={50}
-            onChange={(v) => upd((q) => (q.routes.webFixed = v))}
-          />
-          <NI
-            label="app fee >$1M %"
-            value={p.routes.appFeeHigh}
-            width={48}
-            suffix="%"
-            onChange={(v) => upd((q) => (q.routes.appFeeHigh = v))}
-          />
-          <NI
-            label="IDR per USD"
-            value={p.fx}
-            width={70}
-            onChange={(v) => upd((q) => (q.fx = v))}
-          />
         </div>
       </Sec>
     </div>
