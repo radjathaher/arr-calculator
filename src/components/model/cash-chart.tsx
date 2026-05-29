@@ -64,8 +64,15 @@ export function CashChart({
     const loN = -niceCeil(-lo);
     const step = niceStep(hiN - loN);
     const out: number[] = [];
-    for (let v = 0; v <= hiN + 1; v += step) out.push(Math.round(v));
-    for (let v = -step; v >= loN - 1; v -= step) out.unshift(Math.round(v));
+    // Guard the step (finite, > 0) and cap the count so a degenerate domain can
+    // never spin these loops into a multi-billion-element array (RangeError).
+    if (Number.isFinite(step) && step > 0) {
+      for (let v = 0; v <= hiN + 1 && out.length < 100; v += step) out.push(Math.round(v));
+      for (let v = -step; v >= loN - 1 && out.length < 200; v -= step) out.unshift(Math.round(v));
+    }
+    if (out.length === 0) {
+      out.push(Math.round(Number.isFinite(loN) ? loN : 0), 0, Math.round(Number.isFinite(hiN) ? hiN : 0));
+    }
     const span = hiN - loN || 1;
     return { yMax: hiN, yMin: loN, yTicks: out, zeroOff: hiN / span };
   }, [sim, creditLimit]);

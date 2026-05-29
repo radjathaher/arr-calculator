@@ -53,7 +53,12 @@ export function ArrChart({
     const max = niceCeil(hi);
     const step = max / 4;
     const out: number[] = [];
-    for (let v = 0; v <= max + 1; v += step) out.push(Math.round(v));
+    // Guard the step (finite, > 0) and cap the count so a degenerate domain can
+    // never spin this loop into a multi-billion-element array (RangeError).
+    if (Number.isFinite(step) && step > 0) {
+      for (let v = 0; v <= max + 1 && out.length < 100; v += step) out.push(Math.round(v));
+    }
+    if (out.length === 0) out.push(0, Math.round(Number.isFinite(max) ? max : 0));
     return { yMax: max, yTicks: out };
   }, [sim, goal]);
 
